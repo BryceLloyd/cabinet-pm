@@ -30,6 +30,13 @@ that personal todos must be self-assigned.
 **Why one table:** users want a single "my tasks today" view that mixes both.
 Separate tables would mean UNION queries everywhere.
 
+### Business info is a single-row table
+`business_info` uses `id int primary key default 1 check (id = 1)` to enforce
+exactly one row. Seeded empty on migration so reads never fail. Logo and
+workshop photo stored in Supabase Storage `business-assets` bucket (public-read,
+admin-write). Falls back to "Cabinet PM" wherever the name is shown if empty.
+RLS: public select (needed for login screen), admin-only update/insert.
+
 ### Phase history is automatic
 Trigger on `rooms.current_phase_id` writes to `room_phase_history`. Gives us
 "how long was this room in production?" for free, once we want to report on it.

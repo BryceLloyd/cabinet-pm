@@ -17,11 +17,10 @@ export default async function AppShell({ children }: { children: React.ReactNode
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, role")
-    .eq("id", user.id)
-    .single();
+  const [{ data: profile }, { data: businessInfo }] = await Promise.all([
+    supabase.from("profiles").select("full_name, role").eq("id", user.id).single(),
+    supabase.from("business_info").select("name, logo_url").eq("id", 1).single(),
+  ]);
 
   if (!profile) {
     return (
@@ -43,14 +42,21 @@ export default async function AppShell({ children }: { children: React.ReactNode
 
   const userName = profile.full_name || user.email || "";
   const isAdmin = profile.role === "admin";
+  const bizName = businessInfo?.name || "Cabinet PM";
+  const bizLogo = businessInfo?.logo_url || null;
 
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b bg-background">
         <div className="container flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-4 md:gap-8">
-            <MobileNav userName={userName} isAdmin={isAdmin} />
-            <Link href="/dashboard" className="font-semibold tracking-tight">Cabinet PM</Link>
+            <MobileNav userName={userName} isAdmin={isAdmin} bizName={bizName} bizLogo={bizLogo} />
+            <Link href="/dashboard" className="flex items-center gap-2 font-semibold tracking-tight">
+              {bizLogo && (
+                <img src={bizLogo} alt="" className="h-7 w-7 object-contain rounded" />
+              )}
+              <span>{bizName}</span>
+            </Link>
             <nav className="hidden md:flex items-center gap-1">
               {NAV.map((item) => (
                 <Link

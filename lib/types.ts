@@ -65,6 +65,17 @@ export interface Task {
   updated_at: string;
 }
 
+export interface BusinessInfo {
+  id: number;
+  name: string;
+  logo_url: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  workshop_photo_url: string | null;
+  updated_at: string;
+}
+
 export interface RoomPhaseHistory {
   id: string;
   room_id: string;

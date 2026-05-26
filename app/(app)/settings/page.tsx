@@ -1,21 +1,42 @@
 import { createClient } from "@/lib/supabase/server";
 import { InviteManager } from "@/components/settings/invite-manager";
 import { SetPassword } from "@/components/settings/set-password";
+import { BusinessInfoForm } from "@/components/settings/business-info-form";
+import type { BusinessInfo } from "@/lib/types";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const [{ data: profiles }, { data: phases }, { data: profile }] = await Promise.all([
+  const [{ data: profiles }, { data: phases }, { data: profile }, { data: businessInfo }] = await Promise.all([
     supabase.from("profiles").select("*").order("created_at"),
     supabase.from("phases").select("*").order("sort_order"),
     supabase.from("profiles").select("role").eq("id", user!.id).single(),
+    supabase.from("business_info").select("*").eq("id", 1).single(),
   ]);
 
   const isAdmin = profile?.role === "admin";
 
+  const biz: BusinessInfo = businessInfo || {
+    id: 1, name: "", logo_url: null, address: null, phone: null,
+    email: null, workshop_photo_url: null, updated_at: "",
+  };
+
   return (
     <div className="container py-6 md:py-8 px-4 max-w-3xl">
       <h1 className="text-xl md:text-2xl font-semibold tracking-tight mb-6">Settings</h1>
+
+      {/* Business info */}
+      <section className="rounded-lg border bg-card mb-6">
+        <div className="px-5 py-3.5 border-b">
+          <h2 className="font-medium">Business info</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Appears on the login screen, nav bar, and dashboard.
+          </p>
+        </div>
+        <div className="px-5 py-4">
+          <BusinessInfoForm initial={biz} isAdmin={isAdmin} />
+        </div>
+      </section>
 
       {/* Set password */}
       <section className="rounded-lg border bg-card mb-6">

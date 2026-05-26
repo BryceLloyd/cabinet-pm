@@ -13,7 +13,17 @@ const NAV = [
   { href: "/settings" as const, label: "Settings" },
 ];
 
-export function MobileNav({ userName, isAdmin }: { userName: string; isAdmin: boolean }) {
+export function MobileNav({
+  userName,
+  isAdmin,
+  bizName,
+  bizLogo,
+}: {
+  userName: string;
+  isAdmin: boolean;
+  bizName: string;
+  bizLogo: string | null;
+}) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
@@ -42,7 +52,12 @@ export function MobileNav({ userName, isAdmin }: { userName: string; isAdmin: bo
           <div className="fixed inset-0 bg-black/40" onClick={() => setOpen(false)} />
           <nav className="fixed inset-y-0 left-0 w-64 bg-background border-r p-4 flex flex-col gap-1">
             <div className="flex items-center justify-between mb-4">
-              <span className="font-semibold tracking-tight">Cabinet PM</span>
+              <span className="flex items-center gap-2 font-semibold tracking-tight">
+                {bizLogo && (
+                  <img src={bizLogo} alt="" className="h-6 w-6 object-contain rounded" />
+                )}
+                {bizName}
+              </span>
               <button
                 onClick={() => setOpen(false)}
                 className="p-1 text-muted-foreground hover:text-foreground"
