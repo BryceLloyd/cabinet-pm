@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   startOfYear, endOfYear, eachMonthOfInterval, differenceInDays,
   format, max, min, parseISO, startOfMonth, endOfMonth,
-  startOfWeek, addDays, isSameMonth,
+  startOfWeek, addDays, isSameMonth, isToday,
 } from "date-fns";
 import type { Project, Phase } from "@/lib/types";
 
@@ -105,6 +105,8 @@ function GanttView({
   const yearEnd = endOfYear(new Date(year, 0, 1));
   const totalDays = differenceInDays(yearEnd, yearStart) + 1;
   const months = eachMonthOfInterval({ start: yearStart, end: yearEnd });
+  const today = new Date();
+  const todayInRange = today >= yearStart && today <= yearEnd;
 
   const ROW_H = 36;
   const HEADER_H = 32;
@@ -167,6 +169,23 @@ function GanttView({
             </g>
           );
         })}
+
+        {/* Today line */}
+        {todayInRange && (() => {
+          const todayX = LABEL_W + differenceInDays(today, yearStart) * dayW;
+          return (
+            <g>
+              <line
+                x1={todayX} y1={0} x2={todayX} y2={height}
+                stroke="#ef4444" strokeWidth={2} strokeDasharray="4 2"
+              />
+              <rect x={todayX - 22} y={2} width={44} height={16} rx={3} fill="#ef4444" />
+              <text x={todayX} y={13} textAnchor="middle" fill="white" fontSize={9} fontWeight={600}>
+                Today
+              </text>
+            </g>
+          );
+        })()}
       </svg>
 
       {/* Legend */}
@@ -189,10 +208,21 @@ function GanttView({
 function CalendarView({
   year, projects, phaseMap,
 }: { year: number; projects: Project[]; phaseMap: Map<string, Phase> }) {
+  const todayMonthRef = useRef<HTMLDivElement>(null);
   const months = eachMonthOfInterval({
     start: new Date(year, 0, 1),
     end: new Date(year, 11, 1),
   });
+
+  // Auto-scroll to current month on mount
+  useEffect(() => {
+    if (todayMonthRef.current) {
+      todayMonthRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [year]);
+
+  const today = new Date();
+  const todayMonthIndex = year === today.getFullYear() ? today.getMonth() : -1;
 
   // Group projects by completion date (YYYY-MM-DD)
   const byDate = useMemo(() => {
@@ -207,16 +237,26 @@ function CalendarView({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {months.map((m) => (
-        <MonthCard key={m.toISOString()} month={m} byDate={byDate} phaseMap={phaseMap} />
+      {months.map((m, i) => (
+        <MonthCard
+          key={m.toISOString()}
+          ref={i === todayMonthIndex ? todayMonthRef : undefined}
+          month={m}
+          byDate={byDate}
+          phaseMap={phaseMap}
+          isCurrentMonth={i === todayMonthIndex}
+        />
       ))}
     </div>
   );
 }
 
-function MonthCard({
-  month, byDate, phaseMap,
-}: { month: Date; byDate: Map<string, Project[]>; phaseMap: Map<string, Phase> }) {
+const MonthCard = forwardRef<HTMLDivElement, {
+  month: Date;
+  byDate: Map<string, Project[]>;
+  phaseMap: Map<string, Phase>;
+  isCurrentMonth?: boolean;
+}>(function MonthCard({ month, byDate, phaseMap, isCurrentMonth }, ref) {
   // Build the calendar grid: start from the Monday of the week containing day 1.
   const monthStart = startOfMonth(month);
   const monthEnd = endOfMonth(month);
@@ -229,8 +269,8 @@ function MonthCard({
   }
 
   return (
-    <div className="rounded-lg border bg-card">
-      <div className="px-4 py-2.5 border-b">
+    <div ref={ref} className={`rounded-lg border bg-card ${isCurrentMonth ? "ring-2 ring-primary" : ""}`}>
+      <div className={`px-4 py-2.5 border-b ${isCurrentMonth ? "bg-primary/5" : ""}`}>
         <h3 className="font-medium text-sm">{format(month, "MMMM")}</h3>
       </div>
       <div className="grid grid-cols-7 text-[10px] text-muted-foreground border-b">
@@ -241,16 +281,25 @@ function MonthCard({
       <div className="grid grid-cols-7">
         {days.map((day, i) => {
           const inMonth = isSameMonth(day, month);
+          const dayIsToday = isToday(day);
           const key = format(day, "yyyy-MM-dd");
           const projectsToday = byDate.get(key) || [];
           return (
             <div
               key={i}
               className={`min-h-[44px] border-b border-r last:border-r-0 p-1 text-[11px] ${
-                inMonth ? "" : "bg-muted/30 text-muted-foreground/50"
+                dayIsToday
+                  ? "bg-primary/10"
+                  : inMonth ? "" : "bg-muted/30 text-muted-foreground/50"
               }`}
             >
-              <div className="font-medium">{format(day, "d")}</div>
+              <div className={`font-medium ${
+                dayIsToday
+                  ? "inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px]"
+                  : ""
+              }`}>
+                {format(day, "d")}
+              </div>
               {projectsToday.slice(0, 2).map((p) => {
                 const phase = p.current_phase_id ? phaseMap.get(p.current_phase_id) : null;
                 return (
@@ -277,4 +326,4 @@ function MonthCard({
       </div>
     </div>
   );
-}
+});
