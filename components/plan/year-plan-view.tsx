@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -93,6 +93,7 @@ function GanttView({
   year, projects, phaseMap,
 }: { year: number; projects: Project[]; phaseMap: Map<string, Phase> }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [containerW, setContainerW] = useState(0);
 
   useEffect(() => {
@@ -113,102 +114,171 @@ function GanttView({
   const ROW_H = 36;
   const HEADER_H = 32;
   const isMobile = containerW > 0 && containerW < 640;
-  const LABEL_W = isMobile ? 80 : (containerW > 0 ? Math.max(100, Math.min(240, containerW * 0.2)) : 240);
-  // On mobile: make SVG wide enough for all 12 months but only show ~4 months in viewport
+  const LABEL_W = isMobile ? 90 : (containerW > 0 ? Math.max(100, Math.min(240, containerW * 0.2)) : 240);
+  // On mobile: 4x viewport so ~3 months visible at a time
+  const timelineViewport = containerW - LABEL_W;
   const TIMELINE_W = isMobile
-    ? (containerW - LABEL_W) * 3  // 3x viewport = 12 months, viewport shows ~4
+    ? timelineViewport * 4  // 4x = 12 months, viewport shows ~3
     : (containerW > 0 ? Math.max(600, containerW - LABEL_W) : 980);
   const dayW = TIMELINE_W / totalDays;
   const height = HEADER_H + projects.length * ROW_H;
-  const truncLen = isMobile ? 10 : (LABEL_W > 160 ? 28 : 14);
+  const truncLen = isMobile ? 8 : (LABEL_W > 160 ? 28 : 14);
 
-  // Auto-scroll Gantt to today on mobile
+  // Auto-scroll timeline to today on mobile
   useEffect(() => {
-    if (!isMobile || !todayInRange || !containerRef.current) return;
-    const todayX = LABEL_W + differenceInDays(today, yearStart) * dayW;
-    // Scroll so today is ~25% from left edge
-    const scrollTo = Math.max(0, todayX - (containerW - LABEL_W) * 0.25);
-    containerRef.current.scrollLeft = scrollTo;
+    if (!isMobile || !todayInRange || !scrollRef.current) return;
+    const todayX = differenceInDays(today, yearStart) * dayW;
+    // Scroll so today is ~20% from left edge of timeline viewport
+    const scrollTo = Math.max(0, todayX - timelineViewport * 0.2);
+    scrollRef.current.scrollLeft = scrollTo;
   }, [isMobile, todayInRange, containerW]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return (
-    <div ref={containerRef} className="rounded-lg border bg-card overflow-x-auto no-scrollbar">
-      <svg width={LABEL_W + TIMELINE_W} height={height} className="block">
-        {/* Month header */}
-        <g>
-          {months.map((m, i) => {
-            const x = LABEL_W + (differenceInDays(m, yearStart) * dayW);
-            const w = differenceInDays(endOfMonth(m), m) * dayW + dayW;
+  // Desktop: single SVG, all-in-one
+  if (!isMobile) {
+    return (
+      <div ref={containerRef} className="rounded-lg border bg-card overflow-x-auto">
+        <svg width={LABEL_W + TIMELINE_W} height={height} className="block">
+          <g>
+            {months.map((m, i) => {
+              const x = LABEL_W + (differenceInDays(m, yearStart) * dayW);
+              const w = differenceInDays(endOfMonth(m), m) * dayW + dayW;
+              return (
+                <g key={i}>
+                  <line x1={x} y1={0} x2={x} y2={height} stroke="hsl(var(--border))" strokeWidth={0.5} />
+                  <text x={x + w / 2} y={20} textAnchor="middle" className="fill-muted-foreground" fontSize={11}>
+                    {format(m, "MMM")}
+                  </text>
+                </g>
+              );
+            })}
+            <line x1={LABEL_W} y1={HEADER_H} x2={LABEL_W + TIMELINE_W} y2={HEADER_H} stroke="hsl(var(--border))" />
+            <line x1={LABEL_W} y1={0} x2={LABEL_W} y2={height} stroke="hsl(var(--border))" />
+          </g>
+          {projects.map((p, i) => {
+            const start = max([parseISO(p.start_date), yearStart]);
+            const end = min([parseISO(p.estimated_completion_date), yearEnd]);
+            const x = LABEL_W + (differenceInDays(start, yearStart) * dayW);
+            const w = Math.max(2, (differenceInDays(end, start) + 1) * dayW);
+            const y = HEADER_H + i * ROW_H + 8;
+            const phase = p.current_phase_id ? phaseMap.get(p.current_phase_id) : null;
+            const color = phase?.color || "#94a3b8";
             return (
-              <g key={i}>
-                <line x1={x} y1={0} x2={x} y2={height} stroke="hsl(var(--border))" strokeWidth={0.5} />
-                <text x={x + w / 2} y={20} textAnchor="middle" className="fill-muted-foreground" fontSize={11}>
-                  {format(m, "MMM")}
+              <g key={p.id}>
+                <line x1={0} y1={HEADER_H + i * ROW_H} x2={LABEL_W + TIMELINE_W} y2={HEADER_H + i * ROW_H} stroke="hsl(var(--border))" strokeWidth={0.5} />
+                <text x={12} y={HEADER_H + i * ROW_H + 22} fontSize={12} className="fill-foreground" fontWeight={500}>
+                  {p.name.length > truncLen ? p.name.slice(0, truncLen) + "…" : p.name}
                 </text>
+                {p.client_name && LABEL_W > 160 && (
+                  <text x={12} y={HEADER_H + i * ROW_H + 22} fontSize={10} className="fill-muted-foreground" textAnchor="start" dx={Math.min(160, p.name.length * 6.5 + 8)}>
+                    {p.client_name.length > 16 ? p.client_name.slice(0, 16) + "…" : p.client_name}
+                  </text>
+                )}
+                <a href={`/projects/${p.id}`}>
+                  <rect x={x} y={y} width={w} height={20} rx={4} fill={color} fillOpacity={0.85} className="hover:fill-opacity-100 cursor-pointer" />
+                  <line x1={x + w} y1={y - 2} x2={x + w} y2={y + 22} stroke={color} strokeWidth={2} />
+                </a>
               </g>
             );
           })}
-          <line x1={LABEL_W} y1={HEADER_H} x2={LABEL_W + TIMELINE_W} y2={HEADER_H} stroke="hsl(var(--border))" />
-          <line x1={LABEL_W} y1={0} x2={LABEL_W} y2={height} stroke="hsl(var(--border))" />
-        </g>
+          {todayInRange && (() => {
+            const todayX = LABEL_W + differenceInDays(today, yearStart) * dayW;
+            return (
+              <g>
+                <line x1={todayX} y1={0} x2={todayX} y2={height} stroke="#ef4444" strokeWidth={2} strokeDasharray="4 2" />
+                <rect x={todayX - 22} y={2} width={44} height={16} rx={3} fill="#ef4444" />
+                <text x={todayX} y={13} textAnchor="middle" fill="white" fontSize={9} fontWeight={600}>Today</text>
+              </g>
+            );
+          })()}
+        </svg>
+        <div className="px-4 py-3 border-t flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+          <span>Phases:</span>
+          {Array.from(phaseMap.values()).map((p) => (
+            <span key={p.id} className="inline-flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: p.color }} />
+              {p.name}
+            </span>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
-        {/* Project rows */}
-        {projects.map((p, i) => {
-          const start = max([parseISO(p.start_date), yearStart]);
-          const end = min([parseISO(p.estimated_completion_date), yearEnd]);
-          const x = LABEL_W + (differenceInDays(start, yearStart) * dayW);
-          const w = Math.max(2, (differenceInDays(end, start) + 1) * dayW);
-          const y = HEADER_H + i * ROW_H + 8;
-          const phase = p.current_phase_id ? phaseMap.get(p.current_phase_id) : null;
-          const color = phase?.color || "#94a3b8";
-
-          return (
-            <g key={p.id}>
-              {/* Row divider */}
-              <line x1={0} y1={HEADER_H + i * ROW_H} x2={LABEL_W + TIMELINE_W} y2={HEADER_H + i * ROW_H} stroke="hsl(var(--border))" strokeWidth={0.5} />
-              {/* Label */}
-              <text x={12} y={HEADER_H + i * ROW_H + 22} fontSize={12} className="fill-foreground" fontWeight={500}>
+  // Mobile: sticky label column + scrollable timeline
+  return (
+    <div ref={containerRef} className="rounded-lg border bg-card">
+      <div className="flex">
+        {/* Sticky label column */}
+        <div className="shrink-0 border-r bg-card z-10" style={{ width: LABEL_W }}>
+          <div className="h-8 border-b" />
+          {projects.map((p, i) => (
+            <div
+              key={p.id}
+              className="border-b px-2 flex items-center text-[11px] font-medium truncate"
+              style={{ height: ROW_H }}
+            >
+              <Link href={`/projects/${p.id}`} className="truncate hover:underline">
                 {p.name.length > truncLen ? p.name.slice(0, truncLen) + "…" : p.name}
-              </text>
-              {p.client_name && LABEL_W > 160 && (
-                <text x={12} y={HEADER_H + i * ROW_H + 22} fontSize={10} className="fill-muted-foreground" textAnchor="start" dx={Math.min(160, p.name.length * 6.5 + 8)}>
-                  {p.client_name.length > 16 ? p.client_name.slice(0, 16) + "…" : p.client_name}
-                </text>
-              )}
-              {/* Bar */}
-              <a href={`/projects/${p.id}`}>
-                <rect x={x} y={y} width={w} height={20} rx={4} fill={color} fillOpacity={0.85} className="hover:fill-opacity-100 cursor-pointer" />
-                {/* Completion marker */}
-                <line x1={x + w} y1={y - 2} x2={x + w} y2={y + 22} stroke={color} strokeWidth={2} />
-              </a>
-            </g>
-          );
-        })}
+              </Link>
+            </div>
+          ))}
+        </div>
 
-        {/* Today line */}
-        {todayInRange && (() => {
-          const todayX = LABEL_W + differenceInDays(today, yearStart) * dayW;
-          return (
+        {/* Scrollable timeline */}
+        <div ref={scrollRef} className="overflow-x-auto no-scrollbar flex-1">
+          <svg width={TIMELINE_W} height={height} className="block">
             <g>
-              <line
-                x1={todayX} y1={0} x2={todayX} y2={height}
-                stroke="#ef4444" strokeWidth={2} strokeDasharray="4 2"
-              />
-              <rect x={todayX - 22} y={2} width={44} height={16} rx={3} fill="#ef4444" />
-              <text x={todayX} y={13} textAnchor="middle" fill="white" fontSize={9} fontWeight={600}>
-                Today
-              </text>
+              {months.map((m, i) => {
+                const x = differenceInDays(m, yearStart) * dayW;
+                const w = differenceInDays(endOfMonth(m), m) * dayW + dayW;
+                return (
+                  <g key={i}>
+                    <line x1={x} y1={0} x2={x} y2={height} stroke="hsl(var(--border))" strokeWidth={0.5} />
+                    <text x={x + w / 2} y={20} textAnchor="middle" className="fill-muted-foreground" fontSize={10}>
+                      {format(m, "MMM")}
+                    </text>
+                  </g>
+                );
+              })}
+              <line x1={0} y1={HEADER_H} x2={TIMELINE_W} y2={HEADER_H} stroke="hsl(var(--border))" />
             </g>
-          );
-        })()}
-      </svg>
+            {projects.map((p, i) => {
+              const start = max([parseISO(p.start_date), yearStart]);
+              const end = min([parseISO(p.estimated_completion_date), yearEnd]);
+              const x = differenceInDays(start, yearStart) * dayW;
+              const w = Math.max(2, (differenceInDays(end, start) + 1) * dayW);
+              const y = HEADER_H + i * ROW_H + 8;
+              const phase = p.current_phase_id ? phaseMap.get(p.current_phase_id) : null;
+              const color = phase?.color || "#94a3b8";
+              return (
+                <g key={p.id}>
+                  <line x1={0} y1={HEADER_H + i * ROW_H} x2={TIMELINE_W} y2={HEADER_H + i * ROW_H} stroke="hsl(var(--border))" strokeWidth={0.5} />
+                  <a href={`/projects/${p.id}`}>
+                    <rect x={x} y={y} width={w} height={20} rx={4} fill={color} fillOpacity={0.85} className="hover:fill-opacity-100 cursor-pointer" />
+                    <line x1={x + w} y1={y - 2} x2={x + w} y2={y + 22} stroke={color} strokeWidth={2} />
+                  </a>
+                </g>
+              );
+            })}
+            {todayInRange && (() => {
+              const todayX = differenceInDays(today, yearStart) * dayW;
+              return (
+                <g>
+                  <line x1={todayX} y1={0} x2={todayX} y2={height} stroke="#ef4444" strokeWidth={2} strokeDasharray="4 2" />
+                  <rect x={todayX - 22} y={2} width={44} height={16} rx={3} fill="#ef4444" />
+                  <text x={todayX} y={13} textAnchor="middle" fill="white" fontSize={9} fontWeight={600}>Today</text>
+                </g>
+              );
+            })()}
+          </svg>
+        </div>
+      </div>
 
-      {/* Legend */}
-      <div className="px-4 py-3 border-t flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+      <div className="px-3 py-2 border-t flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
         <span>Phases:</span>
         {Array.from(phaseMap.values()).map((p) => (
-          <span key={p.id} className="inline-flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: p.color }} />
+          <span key={p.id} className="inline-flex items-center gap-1">
+            <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: p.color }} />
             {p.name}
           </span>
         ))}
@@ -229,10 +299,10 @@ function CalendarView({
     end: new Date(year, 11, 1),
   });
 
-  // Auto-scroll to current month on mount
-  useEffect(() => {
+  // Jump to current month immediately (no animation) before paint
+  useLayoutEffect(() => {
     if (todayMonthRef.current) {
-      todayMonthRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      todayMonthRef.current.scrollIntoView({ behavior: "instant", block: "start" });
     }
   }, [year]);
 
