@@ -8,7 +8,7 @@ export default async function SettingsPage() {
   ]);
 
   return (
-    <div className="container py-8 max-w-3xl">
+    <div className="container py-6 md:py-8 px-4 max-w-3xl">
       <h1 className="text-2xl font-semibold tracking-tight mb-6">Settings</h1>
 
       <section className="rounded-lg border bg-card mb-6">

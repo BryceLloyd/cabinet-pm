@@ -35,15 +35,15 @@ export default async function TasksPage({
   ];
 
   return (
-    <div className="container py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Tasks</h1>
-        <div className="flex items-center rounded-md border p-0.5">
+    <div className="container py-6 md:py-8 px-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+        <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Tasks</h1>
+        <div className="flex items-center rounded-md border p-0.5 overflow-x-auto">
           {FILTERS.map((f) => (
             <Link
               key={f.key}
               href={`/tasks?filter=${f.key}`}
-              className={`h-7 px-3 text-xs rounded grid place-items-center ${
+              className={`h-7 px-3 text-xs rounded grid place-items-center whitespace-nowrap ${
                 filter === f.key ? "bg-primary text-primary-foreground" : "hover:bg-muted"
               }`}
             >{f.label}</Link>
@@ -51,7 +51,8 @@ export default async function TasksPage({
         </div>
       </div>
 
-      <div className="rounded-lg border bg-card overflow-hidden">
+      {/* Desktop table */}
+      <div className="hidden md:block rounded-lg border bg-card overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
@@ -94,6 +95,39 @@ export default async function TasksPage({
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-3">
+        {(tasks || []).length === 0 && (
+          <div className="rounded-lg border bg-card px-4 py-12 text-center text-sm text-muted-foreground">No tasks.</div>
+        )}
+        {(tasks || []).map((t: any) => (
+          <div key={t.id} className="rounded-lg border bg-card p-4">
+            <div className="flex items-start justify-between gap-2 mb-1.5">
+              <div className={`text-sm ${t.completed_at ? "line-through text-muted-foreground" : "font-medium"}`}>
+                {t.title}
+              </div>
+              {t.completed_at ? (
+                <span className="text-xs text-muted-foreground shrink-0">✓</span>
+              ) : (
+                <span className="text-xs text-muted-foreground shrink-0">Open</span>
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground space-y-0.5">
+              <div>
+                {t.projects ? (
+                  <Link href={`/projects/${t.project_id}`} className="hover:underline">{t.projects.name}</Link>
+                ) : "Personal"}
+                {t.rooms && <span> · {t.rooms.name}</span>}
+              </div>
+              <div className="flex gap-3">
+                {t.assignee?.full_name && <span>{t.assignee.full_name}</span>}
+                {t.due_date && <span className="tabular-nums">{format(new Date(t.due_date), "MMM d")}</span>}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

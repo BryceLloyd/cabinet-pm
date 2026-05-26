@@ -25,10 +25,10 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   if (!project) notFound();
 
   return (
-    <div className="container py-8">
+    <div className="container py-6 md:py-8 px-4">
       <div className="mb-6">
         <Link href="/projects" className="text-xs text-muted-foreground hover:text-foreground">← All projects</Link>
-        <div className="mt-1 flex items-start justify-between gap-4">
+        <div className="mt-1 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">{project.name}</h1>
             <div className="mt-1 text-sm text-muted-foreground">

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { MobileNav } from "@/components/mobile-nav";
 
 const NAV = [
   { href: "/dashboard" as const, label: "Dashboard" },
@@ -21,13 +22,17 @@ export default async function AppShell({ children }: { children: React.ReactNode
     .eq("id", user.id)
     .single();
 
+  const userName = profile?.full_name || user.email || "";
+  const isAdmin = profile?.role === "admin";
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b bg-background">
-        <div className="container flex h-14 items-center justify-between">
-          <div className="flex items-center gap-8">
+        <div className="container flex h-14 items-center justify-between px-4">
+          <div className="flex items-center gap-4 md:gap-8">
+            <MobileNav userName={userName} isAdmin={isAdmin} />
             <Link href="/dashboard" className="font-semibold tracking-tight">Cabinet PM</Link>
-            <nav className="flex items-center gap-1">
+            <nav className="hidden md:flex items-center gap-1">
               {NAV.map((item) => (
                 <Link
                   key={item.href}
@@ -39,9 +44,9 @@ export default async function AppShell({ children }: { children: React.ReactNode
               ))}
             </nav>
           </div>
-          <div className="text-sm text-muted-foreground">
-            {profile?.full_name || user.email}
-            {profile?.role === "admin" && <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-muted">admin</span>}
+          <div className="hidden md:block text-sm text-muted-foreground">
+            {userName}
+            {isAdmin && <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-muted">admin</span>}
           </div>
         </div>
       </header>

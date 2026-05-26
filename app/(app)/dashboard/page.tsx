@@ -26,7 +26,7 @@ export default async function DashboardPage() {
   const phaseMap = new Map((phases || []).map((p) => [p.id, p]));
 
   return (
-    <div className="container py-8">
+    <div className="container py-6 md:py-8 px-4">
       <h1 className="text-2xl font-semibold tracking-tight mb-6">Dashboard</h1>
 
       <div className="grid lg:grid-cols-2 gap-6">

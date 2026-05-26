@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -31,15 +31,15 @@ export function YearPlanView({ year, initialView, projects, phases }: Props) {
   }
 
   return (
-    <div className="container py-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="container py-6 md:py-8 px-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Year plan</h1>
+          <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Year plan</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {projects.length} projects · scheduled backwards from completion date
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center rounded-md border">
             <button
               onClick={() => setQuery({ year: String(year - 1) })}
@@ -90,20 +90,32 @@ export function YearPlanView({ year, initialView, projects, phases }: Props) {
 function GanttView({
   year, projects, phaseMap,
 }: { year: number; projects: Project[]; phaseMap: Map<string, Phase> }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerW, setContainerW] = useState(0);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setContainerW(entry.contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const yearStart = startOfYear(new Date(year, 0, 1));
   const yearEnd = endOfYear(new Date(year, 0, 1));
   const totalDays = differenceInDays(yearEnd, yearStart) + 1;
   const months = eachMonthOfInterval({ start: yearStart, end: yearEnd });
 
   const ROW_H = 36;
-  const LABEL_W = 240;
   const HEADER_H = 32;
-  const TIMELINE_W = 980;
+  const LABEL_W = containerW > 0 ? Math.max(100, Math.min(240, containerW * 0.2)) : 240;
+  const TIMELINE_W = containerW > 0 ? Math.max(600, containerW - LABEL_W) : 980;
   const dayW = TIMELINE_W / totalDays;
   const height = HEADER_H + projects.length * ROW_H;
+  const truncLen = LABEL_W > 160 ? 28 : 14;
 
   return (
-    <div className="rounded-lg border bg-card overflow-x-auto">
+    <div ref={containerRef} className="rounded-lg border bg-card overflow-x-auto">
       <svg width={LABEL_W + TIMELINE_W} height={height} className="block">
         {/* Month header */}
         <g>
@@ -139,9 +151,9 @@ function GanttView({
               <line x1={0} y1={HEADER_H + i * ROW_H} x2={LABEL_W + TIMELINE_W} y2={HEADER_H + i * ROW_H} stroke="hsl(var(--border))" strokeWidth={0.5} />
               {/* Label */}
               <text x={12} y={HEADER_H + i * ROW_H + 22} fontSize={12} className="fill-foreground" fontWeight={500}>
-                {p.name.length > 28 ? p.name.slice(0, 28) + "…" : p.name}
+                {p.name.length > truncLen ? p.name.slice(0, truncLen) + "…" : p.name}
               </text>
-              {p.client_name && (
+              {p.client_name && LABEL_W > 160 && (
                 <text x={12} y={HEADER_H + i * ROW_H + 22} fontSize={10} className="fill-muted-foreground" textAnchor="start" dx={Math.min(160, p.name.length * 6.5 + 8)}>
                   {p.client_name.length > 16 ? p.client_name.slice(0, 16) + "…" : p.client_name}
                 </text>

@@ -61,7 +61,7 @@ export default function NewProjectPage() {
   );
 
   return (
-    <div className="container py-8 max-w-2xl">
+    <div className="container py-6 md:py-8 px-4 max-w-2xl">
       <h1 className="text-2xl font-semibold tracking-tight mb-6">New project</h1>
 
       <form onSubmit={submit} className="space-y-5 rounded-lg border bg-card p-6">
@@ -75,7 +75,7 @@ export default function NewProjectPage() {
           />
         </Field>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Client name">
             <input
               value={form.client_name}
@@ -92,7 +92,7 @@ export default function NewProjectPage() {
           </Field>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Estimated completion date" required>
             <input
               type="date"
