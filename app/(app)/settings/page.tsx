@@ -1,16 +1,33 @@
 import { createClient } from "@/lib/supabase/server";
+import { InviteManager } from "@/components/settings/invite-manager";
+import { SetPassword } from "@/components/settings/set-password";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
-  const [{ data: profiles }, { data: phases }] = await Promise.all([
+  const { data: { user } } = await supabase.auth.getUser();
+  const [{ data: profiles }, { data: phases }, { data: profile }] = await Promise.all([
     supabase.from("profiles").select("*").order("created_at"),
     supabase.from("phases").select("*").order("sort_order"),
+    supabase.from("profiles").select("role").eq("id", user!.id).single(),
   ]);
+
+  const isAdmin = profile?.role === "admin";
 
   return (
     <div className="container py-6 md:py-8 px-4 max-w-3xl">
-      <h1 className="text-2xl font-semibold tracking-tight mb-6">Settings</h1>
+      <h1 className="text-xl md:text-2xl font-semibold tracking-tight mb-6">Settings</h1>
 
+      {/* Set password */}
+      <section className="rounded-lg border bg-card mb-6">
+        <div className="px-5 py-3.5 border-b">
+          <h2 className="font-medium">Your password</h2>
+        </div>
+        <div className="px-5 py-4">
+          <SetPassword />
+        </div>
+      </section>
+
+      {/* Team members */}
       <section className="rounded-lg border bg-card mb-6">
         <div className="px-5 py-3.5 border-b">
           <h2 className="font-medium">Team</h2>
@@ -26,11 +43,24 @@ export default async function SettingsPage() {
             </li>
           ))}
         </ul>
-        <div className="px-5 py-3 text-xs text-muted-foreground border-t">
-          To add a team member: have them sign in via magic link, then edit their profile in the Supabase dashboard.
-        </div>
       </section>
 
+      {/* Invite management — admin only */}
+      {isAdmin && (
+        <section className="rounded-lg border bg-card mb-6">
+          <div className="px-5 py-3.5 border-b">
+            <h2 className="font-medium">Allowed emails</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Only these emails can sign up. Add someone before they create an account.
+            </p>
+          </div>
+          <div className="px-5 py-4">
+            <InviteManager />
+          </div>
+        </section>
+      )}
+
+      {/* Phases */}
       <section className="rounded-lg border bg-card">
         <div className="px-5 py-3.5 border-b">
           <h2 className="font-medium">Phases</h2>
@@ -47,9 +77,6 @@ export default async function SettingsPage() {
             </li>
           ))}
         </ul>
-        <div className="px-5 py-3 text-xs text-muted-foreground border-t">
-          Phase editing UI coming next. For now, edit directly in the Supabase <code className="text-xs">phases</code> table.
-        </div>
       </section>
     </div>
   );

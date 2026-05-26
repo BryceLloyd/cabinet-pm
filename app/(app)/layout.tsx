@@ -22,8 +22,26 @@ export default async function AppShell({ children }: { children: React.ReactNode
     .eq("id", user.id)
     .single();
 
-  const userName = profile?.full_name || user.email || "";
-  const isAdmin = profile?.role === "admin";
+  if (!profile) {
+    return (
+      <main className="min-h-screen grid place-items-center px-6">
+        <div className="text-center max-w-sm">
+          <h1 className="text-xl font-semibold mb-2">Access denied</h1>
+          <p className="text-sm text-muted-foreground mb-4">
+            Your email hasn&apos;t been approved for this workspace. Ask an admin to add you.
+          </p>
+          <form action="/auth/signout" method="POST">
+            <button type="submit" className="text-sm underline text-muted-foreground hover:text-foreground">
+              Sign out
+            </button>
+          </form>
+        </div>
+      </main>
+    );
+  }
+
+  const userName = profile.full_name || user.email || "";
+  const isAdmin = profile.role === "admin";
 
   return (
     <div className="min-h-screen flex flex-col">
