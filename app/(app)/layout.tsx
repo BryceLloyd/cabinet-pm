@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { MobileNav } from "@/components/mobile-nav";
+import { SignOutButton } from "@/components/sign-out-button";
 
 const NAV = [
   { href: "/dashboard" as const, label: "Dashboard" },
@@ -62,9 +63,12 @@ export default async function AppShell({ children }: { children: React.ReactNode
               ))}
             </nav>
           </div>
-          <div className="hidden md:block text-sm text-muted-foreground">
-            {userName}
-            {isAdmin && <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-muted">admin</span>}
+          <div className="hidden md:flex items-center gap-3 text-sm text-muted-foreground">
+            <span>
+              {userName}
+              {isAdmin && <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-muted">admin</span>}
+            </span>
+            <SignOutButton />
           </div>
         </div>
       </header>

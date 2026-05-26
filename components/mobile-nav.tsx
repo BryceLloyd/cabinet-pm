@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard" },
@@ -15,6 +16,14 @@ const NAV = [
 export function MobileNav({ userName, isAdmin }: { userName: string; isAdmin: boolean }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleSignOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    setOpen(false);
+    router.push("/login");
+  }
 
   return (
     <>
@@ -58,9 +67,15 @@ export function MobileNav({ userName, isAdmin }: { userName: string; isAdmin: bo
                 {item.label}
               </Link>
             ))}
-            <div className="mt-auto pt-4 border-t text-sm text-muted-foreground px-3">
-              {userName}
-              {isAdmin && <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-muted">admin</span>}
+            <div className="mt-auto pt-4 border-t px-3">
+              <div className="text-sm text-muted-foreground">
+                {userName}
+                {isAdmin && <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-muted">admin</span>}
+              </div>
+              <button
+                onClick={handleSignOut}
+                className="mt-2 text-sm text-muted-foreground hover:text-foreground"
+              >Sign out</button>
             </div>
           </nav>
         </div>
