@@ -17,13 +17,12 @@ export default async function PlanPage({
   const [{ data: projects }, { data: phases }] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, name, client_name, estimated_completion_date, start_date, lead_time_weeks, current_phase_id, status")
+      .select("*")
       .neq("status", "cancelled")
-      // Overlaps with the year if start <= yearEnd AND completion >= yearStart
       .lte("start_date", yearEnd)
       .gte("estimated_completion_date", yearStart)
       .order("estimated_completion_date"),
-    supabase.from("phases").select("id, name, color").order("sort_order"),
+    supabase.from("phases").select("*").order("sort_order"),
   ]);
 
   return (
