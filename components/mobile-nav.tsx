@@ -6,11 +6,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 const NAV = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/plan", label: "Year plan" },
-  { href: "/projects", label: "Projects" },
-  { href: "/tasks", label: "Tasks" },
-  { href: "/settings", label: "Settings" },
+  { href: "/dashboard" as const, label: "Dashboard" },
+  { href: "/plan" as const, label: "Year plan" },
+  { href: "/projects" as const, label: "Projects" },
+  { href: "/tasks" as const, label: "Tasks" },
+  { href: "/settings" as const, label: "Settings" },
 ];
 
 export function MobileNav({ userName, isAdmin }: { userName: string; isAdmin: boolean }) {
