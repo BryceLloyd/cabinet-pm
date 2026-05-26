@@ -29,6 +29,8 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
   const [rooms, setRooms] = useState(initialRooms);
   const [tasks, setTasks] = useState(initialTasks);
   const [newRoomName, setNewRoomName] = useState("");
+  const [editingRoom, setEditingRoom] = useState<string | null>(null);
+  const [editRoomForm, setEditRoomForm] = useState({ name: "", notes: "" });
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskRoom, setNewTaskRoom] = useState<string>("");
   const [newTaskAssignee, setNewTaskAssignee] = useState<string>("");
@@ -73,6 +75,36 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
       .eq("id", roomId);
     if (!error) {
       setRooms(rooms.map((r) => (r.id === roomId ? { ...r, current_phase_id: phaseId } : r)));
+    }
+  }
+
+  function startEditingRoom(room: Room) {
+    setEditingRoom(room.id);
+    setEditRoomForm({ name: room.name, notes: room.notes || "" });
+  }
+
+  async function saveRoom(roomId: string) {
+    if (!editRoomForm.name.trim()) return;
+    const { error } = await supabase
+      .from("rooms")
+      .update({ name: editRoomForm.name.trim(), notes: editRoomForm.notes.trim() || null })
+      .eq("id", roomId);
+    if (!error) {
+      setRooms(rooms.map((r) => r.id === roomId ? { ...r, name: editRoomForm.name.trim(), notes: editRoomForm.notes.trim() || null } : r));
+      setEditingRoom(null);
+    }
+  }
+
+  async function deleteRoom(roomId: string) {
+    const roomTasks = tasks.filter((t) => t.room_id === roomId);
+    const msg = roomTasks.length > 0
+      ? `Delete this room and unlink its ${roomTasks.length} task(s)?`
+      : "Delete this room?";
+    if (!confirm(msg)) return;
+    const { error } = await supabase.from("rooms").delete().eq("id", roomId);
+    if (!error) {
+      setRooms(rooms.filter((r) => r.id !== roomId));
+      setTasks(tasks.map((t) => t.room_id === roomId ? { ...t, room_id: null } as Task : t));
     }
   }
 
@@ -303,23 +335,86 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
           )}
           {rooms.map((room) => {
             const phase = room.current_phase_id ? phaseMap.get(room.current_phase_id) : null;
+            const roomTaskCount = tasks.filter((t) => t.room_id === room.id && !t.completed_at).length;
+            const isEditing = editingRoom === room.id;
+
+            if (isEditing) {
+              return (
+                <li key={room.id} className="px-5 py-3 space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      value={editRoomForm.name}
+                      onChange={(e) => setEditRoomForm({ ...editRoomForm, name: e.target.value })}
+                      onKeyDown={(e) => e.key === "Enter" && saveRoom(room.id)}
+                      className="flex-1 h-8 px-3 text-sm rounded-md border bg-background"
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => saveRoom(room.id)}
+                      className="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setEditingRoom(null)}
+                      className="h-8 px-3 rounded-md border text-xs hover:bg-muted"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  <input
+                    value={editRoomForm.notes}
+                    onChange={(e) => setEditRoomForm({ ...editRoomForm, notes: e.target.value })}
+                    onKeyDown={(e) => e.key === "Enter" && saveRoom(room.id)}
+                    placeholder="Notes (optional)"
+                    className="w-full h-8 px-3 text-sm rounded-md border bg-background"
+                  />
+                </li>
+              );
+            }
+
             return (
-              <li key={room.id} className="px-5 py-3 flex items-center justify-between gap-3">
+              <li key={room.id} className="px-5 py-3 flex items-center justify-between gap-3 group">
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium">{room.name}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">{room.name}</span>
+                    {roomTaskCount > 0 && (
+                      <span className="text-xs text-muted-foreground">{roomTaskCount} task{roomTaskCount !== 1 ? "s" : ""}</span>
+                    )}
+                  </div>
                   {room.notes && <div className="text-xs text-muted-foreground mt-0.5">{room.notes}</div>}
                 </div>
-                <select
-                  value={room.current_phase_id || ""}
-                  onChange={(e) => changeRoomPhase(room.id, e.target.value)}
-                  className="h-7 px-2 text-xs rounded-md border bg-background"
-                  style={phase ? { color: phase.color, borderColor: `${phase.color}50` } : {}}
-                >
-                  <option value="">— no phase —</option>
-                  {phases.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={room.current_phase_id || ""}
+                    onChange={(e) => changeRoomPhase(room.id, e.target.value)}
+                    className="h-7 px-2 text-xs rounded-md border bg-background"
+                    style={phase ? { color: phase.color, borderColor: `${phase.color}50` } : {}}
+                  >
+                    <option value="">— no phase —</option>
+                    {phases.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => startEditingRoom(room)}
+                    className="h-7 w-7 rounded-md border grid place-items-center text-muted-foreground hover:text-foreground hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Edit room"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => deleteRoom(room.id)}
+                    className="h-7 w-7 rounded-md border grid place-items-center text-muted-foreground hover:text-destructive hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Delete room"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                    </svg>
+                  </button>
+                </div>
               </li>
             );
           })}
