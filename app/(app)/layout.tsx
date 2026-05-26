@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { MobileNav } from "@/components/mobile-nav";
 import { UserMenu } from "@/components/user-menu";
+import { BottomTabBar } from "@/components/bottom-tab-bar";
 
 const NAV = [
   { href: "/dashboard" as const, label: "Dashboard" },
@@ -39,8 +39,6 @@ export default async function AppShell({ children }: { children: React.ReactNode
     );
   }
 
-  const userName = profile.full_name || user.email || "";
-  const isAdmin = profile.role === "admin";
   const bizName = businessInfo?.name || "Cabinet PM";
   const bizLogo = businessInfo?.logo_url || null;
 
@@ -49,12 +47,11 @@ export default async function AppShell({ children }: { children: React.ReactNode
       <header className="border-b bg-background">
         <div className="container flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-4 md:gap-8">
-            <MobileNav userName={userName} isAdmin={isAdmin} bizName={bizName} bizLogo={bizLogo} />
             <Link href="/dashboard" className="flex items-center gap-2 font-semibold tracking-tight">
               {bizLogo && (
                 <img src={bizLogo} alt="" className="h-7 w-7 object-contain rounded" />
               )}
-              <span>{bizName}</span>
+              <span className="hidden md:inline">{bizName}</span>
             </Link>
             <nav className="hidden md:flex items-center gap-1">
               {NAV.map((item) => (
@@ -68,17 +65,16 @@ export default async function AppShell({ children }: { children: React.ReactNode
               ))}
             </nav>
           </div>
-          <div className="hidden md:flex items-center">
-            <UserMenu
-              fullName={profile.full_name}
-              email={user.email || ""}
-              role={profile.role}
-              avatarUrl={profile.avatar_url || null}
-            />
-          </div>
+          <UserMenu
+            fullName={profile.full_name}
+            email={user.email || ""}
+            role={profile.role}
+            avatarUrl={profile.avatar_url || null}
+          />
         </div>
       </header>
-      <main className="flex-1">{children}</main>
+      <main className="flex-1 pb-16 md:pb-0">{children}</main>
+      <BottomTabBar />
     </div>
   );
 }
