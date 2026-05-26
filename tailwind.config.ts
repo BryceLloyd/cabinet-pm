@@ -4,7 +4,7 @@ export default {
   darkMode: ["class"],
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
-    container: { center: true, padding: "1.5rem" },
+    container: { center: true, padding: { DEFAULT: "1rem", md: "1.5rem" } },
     extend: {
       fontFamily: {
         sans: ["ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto"],
