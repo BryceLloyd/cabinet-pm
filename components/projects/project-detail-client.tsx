@@ -62,7 +62,12 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
       })
       .select("*")
       .single();
-    if (!error && data) {
+    if (error) {
+      console.error("addRoom error:", error);
+      alert(`Could not add room: ${error.message}`);
+      return;
+    }
+    if (data) {
       setRooms([...rooms, data as Room]);
       setNewRoomName("");
     }

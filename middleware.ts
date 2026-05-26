@@ -23,16 +23,15 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // getSession() reads the JWT from cookies locally (no network call).
-  // This is fast enough for routing decisions. The actual secure getUser()
-  // validation still happens in the server component layout.
-  const { data: { session } } = await supabase.auth.getSession();
+  // getUser() refreshes the session token — required so client-side
+  // Supabase calls don't 403 after the JWT expires.
+  const { data: { user } } = await supabase.auth.getUser();
 
   const isAuthPage = request.nextUrl.pathname.startsWith("/login");
-  if (!session && !isAuthPage) {
+  if (!user && !isAuthPage) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
-  if (session && isAuthPage) {
+  if (user && isAuthPage) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
@@ -40,5 +39,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|auth/callback|manifest.json|icon-).*)"],
+  matcher: ["/((?!_next|favicon.ico|auth/callback|manifest.json|icon).*)"],
 };
