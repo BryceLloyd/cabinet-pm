@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import type { Project, Room, Task, Phase, Profile } from "@/lib/types";
-import { format } from "date-fns";
+import type { Project, Room, Task, Phase, Profile, ProjectStatus } from "@/lib/types";
+import { format, addWeeks } from "date-fns";
 
 interface Props {
   project: Project;
@@ -14,15 +14,35 @@ interface Props {
   profiles: Pick<Profile, "id" | "full_name">[];
 }
 
-export function ProjectDetailClient({ project, initialRooms, initialTasks, phases, profiles }: Props) {
+const STATUSES: { value: ProjectStatus; label: string }[] = [
+  { value: "planning", label: "Planning" },
+  { value: "active", label: "Active" },
+  { value: "on_hold", label: "On hold" },
+  { value: "complete", label: "Complete" },
+  { value: "cancelled", label: "Cancelled" },
+];
+
+export function ProjectDetailClient({ project: initialProject, initialRooms, initialTasks, phases, profiles }: Props) {
   const router = useRouter();
   const supabase = createClient();
+  const [project, setProject] = useState(initialProject);
   const [rooms, setRooms] = useState(initialRooms);
   const [tasks, setTasks] = useState(initialTasks);
   const [newRoomName, setNewRoomName] = useState("");
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskRoom, setNewTaskRoom] = useState<string>("");
   const [newTaskAssignee, setNewTaskAssignee] = useState<string>("");
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: project.name,
+    client_name: project.client_name || "",
+    site_address: project.site_address || "",
+    notes: project.notes || "",
+    estimated_completion_date: project.estimated_completion_date,
+    lead_time_weeks: project.lead_time_weeks,
+    status: project.status,
+  });
 
   const phaseMap = new Map(phases.map((p) => [p.id, p]));
   const profileMap = new Map(profiles.map((p) => [p.id, p]));
@@ -89,7 +109,186 @@ export function ProjectDetailClient({ project, initialRooms, initialTasks, phase
     }
   }
 
+  function startEditing() {
+    setEditForm({
+      name: project.name,
+      client_name: project.client_name || "",
+      site_address: project.site_address || "",
+      notes: project.notes || "",
+      estimated_completion_date: project.estimated_completion_date,
+      lead_time_weeks: project.lead_time_weeks,
+      status: project.status,
+    });
+    setEditing(true);
+  }
+
+  async function saveProject(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    const { data, error } = await supabase
+      .from("projects")
+      .update({
+        name: editForm.name,
+        client_name: editForm.client_name || null,
+        site_address: editForm.site_address || null,
+        notes: editForm.notes || null,
+        estimated_completion_date: editForm.estimated_completion_date,
+        lead_time_weeks: editForm.lead_time_weeks,
+        status: editForm.status,
+      })
+      .eq("id", project.id)
+      .select("*")
+      .single();
+    setSaving(false);
+    if (!error && data) {
+      setProject(data as Project);
+      setEditing(false);
+      router.refresh();
+    }
+  }
+
+  const computedStart = editForm.estimated_completion_date
+    ? format(addWeeks(new Date(editForm.estimated_completion_date), -editForm.lead_time_weeks), "MMM d, yyyy")
+    : "—";
+
   return (
+    <div className="space-y-6">
+      {/* Project header */}
+      {editing ? (
+        <form onSubmit={saveProject} className="rounded-lg border bg-card p-5 space-y-4">
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="font-medium">Edit project</h2>
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              Cancel
+            </button>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Project name *</label>
+            <input
+              required
+              value={editForm.name}
+              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+              className="w-full h-9 px-3 text-sm rounded-md border bg-background"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">Client name</label>
+              <input
+                value={editForm.client_name}
+                onChange={(e) => setEditForm({ ...editForm, client_name: e.target.value })}
+                className="w-full h-9 px-3 text-sm rounded-md border bg-background"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Site address</label>
+              <input
+                value={editForm.site_address}
+                onChange={(e) => setEditForm({ ...editForm, site_address: e.target.value })}
+                className="w-full h-9 px-3 text-sm rounded-md border bg-background"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">Completion date *</label>
+              <input
+                type="date"
+                required
+                value={editForm.estimated_completion_date}
+                onChange={(e) => setEditForm({ ...editForm, estimated_completion_date: e.target.value })}
+                className="w-full h-9 px-3 text-sm rounded-md border bg-background"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Lead time (weeks)</label>
+              <input
+                type="number"
+                min={1}
+                value={editForm.lead_time_weeks}
+                onChange={(e) => setEditForm({ ...editForm, lead_time_weeks: parseInt(e.target.value) || 8 })}
+                className="w-full h-9 px-3 text-sm rounded-md border bg-background"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Status</label>
+              <select
+                value={editForm.status}
+                onChange={(e) => setEditForm({ ...editForm, status: e.target.value as ProjectStatus })}
+                className="w-full h-9 px-2 text-sm rounded-md border bg-background"
+              >
+                {STATUSES.map((s) => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">Start date:</span> {computedStart}
+            <span className="ml-2">(auto-calculated)</span>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Notes</label>
+            <textarea
+              value={editForm.notes}
+              onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+              className="w-full min-h-[60px] px-3 py-2 text-sm rounded-md border bg-background"
+              placeholder="Key constraints, site access notes, etc."
+            />
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={saving}
+              className="h-8 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50"
+            >
+              {saving ? "Saving…" : "Save changes"}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-semibold tracking-tight">{project.name}</h1>
+              <button
+                onClick={startEditing}
+                className="h-7 px-2.5 rounded-md border text-xs text-muted-foreground hover:text-foreground hover:bg-muted"
+              >
+                Edit
+              </button>
+            </div>
+            <div className="mt-1 text-sm text-muted-foreground">
+              {project.client_name && <span>{project.client_name}</span>}
+              {project.site_address && <span> · {project.site_address}</span>}
+            </div>
+            {project.notes && (
+              <p className="mt-2 text-sm text-muted-foreground">{project.notes}</p>
+            )}
+            <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full border capitalize">
+              {project.status.replace("_", " ")}
+            </span>
+          </div>
+          <div className="text-right text-sm tabular-nums shrink-0">
+            <div className="text-muted-foreground text-xs">Completion</div>
+            <div className="font-medium">{format(new Date(project.estimated_completion_date), "MMM d, yyyy")}</div>
+            <div className="text-xs text-muted-foreground mt-1">
+              Starts {format(new Date(project.start_date), "MMM d")} · {project.lead_time_weeks}w lead
+            </div>
+          </div>
+        </div>
+      )}
+
     <div className="grid lg:grid-cols-5 gap-6">
       {/* Rooms */}
       <section className="lg:col-span-3 rounded-lg border bg-card">
@@ -206,6 +405,7 @@ export function ProjectDetailClient({ project, initialRooms, initialTasks, phase
           </div>
         </div>
       </section>
+    </div>
     </div>
   );
 }
