@@ -2,14 +2,13 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { MobileNav } from "@/components/mobile-nav";
-import { SignOutButton } from "@/components/sign-out-button";
+import { UserMenu } from "@/components/user-menu";
 
 const NAV = [
   { href: "/dashboard" as const, label: "Dashboard" },
   { href: "/plan" as const, label: "Year plan" },
   { href: "/projects" as const, label: "Projects" },
   { href: "/tasks" as const, label: "Tasks" },
-  { href: "/settings" as const, label: "Settings" },
 ];
 
 export default async function AppShell({ children }: { children: React.ReactNode }) {
@@ -18,7 +17,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
   if (!user) redirect("/login");
 
   const [{ data: profile }, { data: businessInfo }] = await Promise.all([
-    supabase.from("profiles").select("full_name, role").eq("id", user.id).single(),
+    supabase.from("profiles").select("full_name, role, avatar_url").eq("id", user.id).single(),
     supabase.from("business_info").select("name, logo_url").eq("id", 1).single(),
   ]);
 
@@ -69,12 +68,13 @@ export default async function AppShell({ children }: { children: React.ReactNode
               ))}
             </nav>
           </div>
-          <div className="hidden md:flex items-center gap-3 text-sm text-muted-foreground">
-            <span>
-              {userName}
-              {isAdmin && <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-muted">admin</span>}
-            </span>
-            <SignOutButton />
+          <div className="hidden md:flex items-center">
+            <UserMenu
+              fullName={profile.full_name}
+              email={user.email || ""}
+              role={profile.role}
+              avatarUrl={profile.avatar_url || null}
+            />
           </div>
         </div>
       </header>
