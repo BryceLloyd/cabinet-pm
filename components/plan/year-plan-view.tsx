@@ -32,39 +32,41 @@ export function YearPlanView({ year, initialView, projects, phases }: Props) {
 
   return (
     <div className="container py-6 md:py-8 px-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-        <div>
-          <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Year plan</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {projects.length} projects · scheduled backwards from completion date
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center rounded-md border">
-            <button
-              onClick={() => setQuery({ year: String(year - 1) })}
-              className="h-8 w-8 grid place-items-center text-sm hover:bg-muted"
-            >‹</button>
-            <span className="px-3 text-sm font-medium w-16 text-center">{year}</span>
-            <button
-              onClick={() => setQuery({ year: String(year + 1) })}
-              className="h-8 w-8 grid place-items-center text-sm hover:bg-muted"
-            >›</button>
+      <div className="sticky top-0 z-10 bg-background pb-4 -mt-2 pt-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Year plan</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {projects.length} projects · scheduled backwards from completion date
+            </p>
           </div>
-          <div className="flex items-center rounded-md border p-0.5">
-            <button
-              onClick={() => { setView("gantt"); setQuery({ view: "gantt" }); }}
-              className={`h-7 px-3 text-xs rounded ${view === "gantt" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-            >Gantt</button>
-            <button
-              onClick={() => { setView("calendar"); setQuery({ view: "calendar" }); }}
-              className={`h-7 px-3 text-xs rounded ${view === "calendar" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-            >Calendar</button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center rounded-md border">
+              <button
+                onClick={() => setQuery({ year: String(year - 1) })}
+                className="h-8 w-8 grid place-items-center text-sm hover:bg-muted"
+              >‹</button>
+              <span className="px-3 text-sm font-medium w-16 text-center">{year}</span>
+              <button
+                onClick={() => setQuery({ year: String(year + 1) })}
+                className="h-8 w-8 grid place-items-center text-sm hover:bg-muted"
+              >›</button>
+            </div>
+            <div className="flex items-center rounded-md border p-0.5">
+              <button
+                onClick={() => { setView("gantt"); setQuery({ view: "gantt" }); }}
+                className={`h-7 px-3 text-xs rounded ${view === "gantt" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+              >Gantt</button>
+              <button
+                onClick={() => { setView("calendar"); setQuery({ view: "calendar" }); }}
+                className={`h-7 px-3 text-xs rounded ${view === "calendar" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+              >Calendar</button>
+            </div>
+            <Link
+              href="/projects/new"
+              className="h-8 px-3 inline-flex items-center rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90"
+            >New project</Link>
           </div>
-          <Link
-            href="/projects/new"
-            className="h-8 px-3 inline-flex items-center rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90"
-          >New project</Link>
         </div>
       </div>
 
@@ -110,14 +112,27 @@ function GanttView({
 
   const ROW_H = 36;
   const HEADER_H = 32;
-  const LABEL_W = containerW > 0 ? Math.max(100, Math.min(240, containerW * 0.2)) : 240;
-  const TIMELINE_W = containerW > 0 ? Math.max(600, containerW - LABEL_W) : 980;
+  const isMobile = containerW > 0 && containerW < 640;
+  const LABEL_W = isMobile ? 80 : (containerW > 0 ? Math.max(100, Math.min(240, containerW * 0.2)) : 240);
+  // On mobile: make SVG wide enough for all 12 months but only show ~4 months in viewport
+  const TIMELINE_W = isMobile
+    ? (containerW - LABEL_W) * 3  // 3x viewport = 12 months, viewport shows ~4
+    : (containerW > 0 ? Math.max(600, containerW - LABEL_W) : 980);
   const dayW = TIMELINE_W / totalDays;
   const height = HEADER_H + projects.length * ROW_H;
-  const truncLen = LABEL_W > 160 ? 28 : 14;
+  const truncLen = isMobile ? 10 : (LABEL_W > 160 ? 28 : 14);
+
+  // Auto-scroll Gantt to today on mobile
+  useEffect(() => {
+    if (!isMobile || !todayInRange || !containerRef.current) return;
+    const todayX = LABEL_W + differenceInDays(today, yearStart) * dayW;
+    // Scroll so today is ~25% from left edge
+    const scrollTo = Math.max(0, todayX - (containerW - LABEL_W) * 0.25);
+    containerRef.current.scrollLeft = scrollTo;
+  }, [isMobile, todayInRange, containerW]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div ref={containerRef} className="rounded-lg border bg-card overflow-x-auto">
+    <div ref={containerRef} className="rounded-lg border bg-card overflow-x-auto no-scrollbar">
       <svg width={LABEL_W + TIMELINE_W} height={height} className="block">
         {/* Month header */}
         <g>
