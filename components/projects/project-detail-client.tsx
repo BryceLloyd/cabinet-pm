@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import type { Project, Room, Task, Phase, Profile, ProjectStatus, RoomGroup } from "@/lib/types";
+import type { Project, Room, Task, Phase, Profile, ProjectStatus, RoomGroup, CalendarEvent, EventType } from "@/lib/types";
 import { RoomGroupManager } from "@/components/projects/room-group-manager";
 import { PlanningSection } from "@/components/projects/planning-section";
+import { ProjectEventsSection } from "@/components/projects/project-events-section";
 import { format, addWeeks } from "date-fns";
 
 interface Props {
@@ -15,6 +16,8 @@ interface Props {
   phases: Phase[];
   profiles: Pick<Profile, "id" | "full_name">[];
   initialRoomGroups: RoomGroup[];
+  initialEvents: CalendarEvent[];
+  eventTypes: EventType[];
 }
 
 const STATUSES: { value: ProjectStatus; label: string }[] = [
@@ -25,7 +28,7 @@ const STATUSES: { value: ProjectStatus; label: string }[] = [
   { value: "cancelled", label: "Cancelled" },
 ];
 
-export function ProjectDetailClient({ project: initialProject, initialRooms, initialTasks, phases, profiles, initialRoomGroups }: Props) {
+export function ProjectDetailClient({ project: initialProject, initialRooms, initialTasks, phases, profiles, initialRoomGroups, initialEvents, eventTypes }: Props) {
   const router = useRouter();
   const supabase = createClient();
   const [project, setProject] = useState(initialProject);
@@ -324,6 +327,94 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
         </div>
       )}
 
+      {/* Events */}
+      <ProjectEventsSection
+        projectId={project.id}
+        initialEvents={initialEvents}
+        eventTypes={eventTypes}
+        roomGroups={roomGroups}
+      />
+
+      {/* Tasks */}
+      <section className="rounded-lg border bg-card">
+        <div className="px-5 py-3.5 border-b">
+          <h2 className="font-medium">Tasks</h2>
+        </div>
+        <ul className="divide-y max-h-[480px] overflow-y-auto">
+          {tasks.length === 0 && (
+            <li className="px-5 py-8 text-sm text-muted-foreground text-center">No tasks yet.</li>
+          )}
+          {tasks.map((task) => {
+            const room = rooms.find((r) => r.id === task.room_id);
+            const assignee = task.assigned_to ? profileMap.get(task.assigned_to) : null;
+            const completedBy = task.completed_by ? profileMap.get(task.completed_by) : null;
+            return (
+              <li key={task.id} className="px-5 py-2.5 flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={!!task.completed_at}
+                  onChange={() => toggleTask(task)}
+                  className="mt-1 size-4 rounded border-input cursor-pointer"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className={`text-sm ${task.completed_at ? "line-through text-muted-foreground" : ""}`}>
+                    {task.title}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-2">
+                    {task.room_group_id && (() => {
+                      const group = roomGroups.find((g) => g.id === task.room_group_id);
+                      return group ? <span className="text-xs px-1.5 py-0.5 rounded bg-muted">{group.name}</span> : null;
+                    })()}
+                    {room && <span>{room.name}</span>}
+                    {assignee && <span>· {assignee.full_name}</span>}
+                    {task.due_date && <span>· Due {format(new Date(task.due_date), "MMM d")}</span>}
+                    {completedBy && <span>· ✓ {completedBy.full_name}</span>}
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="px-5 py-3 border-t space-y-2">
+          <input
+            value={newTaskTitle}
+            onChange={(e) => setNewTaskTitle(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && addTask()}
+            placeholder="New task…"
+            className="w-full h-8 px-3 text-sm rounded-md border bg-background"
+          />
+          <div className="flex gap-2">
+            <select
+              value={newTaskRoomGroup}
+              onChange={(e) => setNewTaskRoomGroup(e.target.value)}
+              className="flex-1 h-8 px-2 text-xs rounded-md border bg-background"
+            >
+              <option value="">No group</option>
+              {roomGroups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+            </select>
+            <select
+              value={newTaskRoom}
+              onChange={(e) => setNewTaskRoom(e.target.value)}
+              className="flex-1 h-8 px-2 text-xs rounded-md border bg-background"
+            >
+              <option value="">No specific room</option>
+              {rooms.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+            <select
+              value={newTaskAssignee}
+              onChange={(e) => setNewTaskAssignee(e.target.value)}
+              className="flex-1 h-8 px-2 text-xs rounded-md border bg-background"
+            >
+              <option value="">Unassigned</option>
+              {profiles.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+            </select>
+            <button onClick={addTask} className="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90">
+              Add
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* Room Groups */}
       <RoomGroupManager
         projectId={project.id}
@@ -334,18 +425,8 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
         onRoomsChange={setRooms}
       />
 
-      {/* Planning */}
-      <PlanningSection
-        projectId={project.id}
-        projectStart={project.start_date}
-        projectEnd={project.estimated_completion_date}
-        phases={phases}
-        groups={roomGroups}
-      />
-
-    <div className="grid lg:grid-cols-5 gap-6">
       {/* Rooms */}
-      <section className="lg:col-span-3 rounded-lg border bg-card">
+      <section className="rounded-lg border bg-card">
         <div className="px-5 py-3.5 border-b">
           <h2 className="font-medium">Rooms</h2>
         </div>
@@ -447,86 +528,14 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
         </div>
       </section>
 
-      {/* Tasks */}
-      <section className="lg:col-span-2 rounded-lg border bg-card">
-        <div className="px-5 py-3.5 border-b">
-          <h2 className="font-medium">Tasks</h2>
-        </div>
-        <ul className="divide-y max-h-[480px] overflow-y-auto">
-          {tasks.length === 0 && (
-            <li className="px-5 py-8 text-sm text-muted-foreground text-center">No tasks yet.</li>
-          )}
-          {tasks.map((task) => {
-            const room = rooms.find((r) => r.id === task.room_id);
-            const assignee = task.assigned_to ? profileMap.get(task.assigned_to) : null;
-            const completedBy = task.completed_by ? profileMap.get(task.completed_by) : null;
-            return (
-              <li key={task.id} className="px-5 py-2.5 flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={!!task.completed_at}
-                  onChange={() => toggleTask(task)}
-                  className="mt-1 size-4 rounded border-input cursor-pointer"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className={`text-sm ${task.completed_at ? "line-through text-muted-foreground" : ""}`}>
-                    {task.title}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-2">
-                    {task.room_group_id && (() => {
-                      const group = roomGroups.find((g) => g.id === task.room_group_id);
-                      return group ? <span className="text-xs px-1.5 py-0.5 rounded bg-muted">{group.name}</span> : null;
-                    })()}
-                    {room && <span>{room.name}</span>}
-                    {assignee && <span>· {assignee.full_name}</span>}
-                    {task.due_date && <span>· Due {format(new Date(task.due_date), "MMM d")}</span>}
-                    {completedBy && <span>· ✓ {completedBy.full_name}</span>}
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-        <div className="px-5 py-3 border-t space-y-2">
-          <input
-            value={newTaskTitle}
-            onChange={(e) => setNewTaskTitle(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && addTask()}
-            placeholder="New task…"
-            className="w-full h-8 px-3 text-sm rounded-md border bg-background"
-          />
-          <div className="flex gap-2">
-            <select
-              value={newTaskRoomGroup}
-              onChange={(e) => setNewTaskRoomGroup(e.target.value)}
-              className="flex-1 h-8 px-2 text-xs rounded-md border bg-background"
-            >
-              <option value="">No group</option>
-              {roomGroups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-            </select>
-            <select
-              value={newTaskRoom}
-              onChange={(e) => setNewTaskRoom(e.target.value)}
-              className="flex-1 h-8 px-2 text-xs rounded-md border bg-background"
-            >
-              <option value="">No specific room</option>
-              {rooms.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
-            <select
-              value={newTaskAssignee}
-              onChange={(e) => setNewTaskAssignee(e.target.value)}
-              className="flex-1 h-8 px-2 text-xs rounded-md border bg-background"
-            >
-              <option value="">Unassigned</option>
-              {profiles.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
-            </select>
-            <button onClick={addTask} className="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90">
-              Add
-            </button>
-          </div>
-        </div>
-      </section>
-    </div>
+      {/* Planning */}
+      <PlanningSection
+        projectId={project.id}
+        projectStart={project.start_date}
+        projectEnd={project.estimated_completion_date}
+        phases={phases}
+        groups={roomGroups}
+      />
     </div>
   );
 }

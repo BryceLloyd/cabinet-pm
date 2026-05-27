@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ProjectDetailClient } from "@/components/projects/project-detail-client";
-import { ProjectEventsSection } from "@/components/projects/project-events-section";
 import type { CalendarEvent, EventType } from "@/lib/types";
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -53,16 +52,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         phases={phases || []}
         profiles={profiles || []}
         initialRoomGroups={roomGroups || []}
+        initialEvents={(calendarEvents || []) as CalendarEvent[]}
+        eventTypes={(eventTypes || []) as EventType[]}
       />
-
-      <div className="mt-6">
-        <ProjectEventsSection
-          projectId={project.id}
-          initialEvents={(calendarEvents || []) as CalendarEvent[]}
-          eventTypes={(eventTypes || []) as EventType[]}
-          roomGroups={roomGroups || []}
-        />
-      </div>
     </div>
   );
 }
