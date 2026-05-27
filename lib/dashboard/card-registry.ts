@@ -24,14 +24,14 @@ export const CARD_REGISTRY: Record<string, CardDefinition> = {
     actionLabel: "View all",
     actionHref: "/tasks",
   },
-  upcoming_deadlines: {
-    type: "upcoming_deadlines",
-    title: "Upcoming deadlines",
-    description: "Projects due within the next 14 days",
-    component: lazy(() => import("@/components/dashboard/cards/upcoming-deadlines-card")),
+  upcoming_events: {
+    type: "upcoming_events",
+    title: "Upcoming events",
+    description: "Calendar events in the next 14 days",
+    component: lazy(() => import("@/components/dashboard/cards/upcoming-events-card")),
     defaultSize: "sm",
     actionLabel: "View all",
-    actionHref: "/projects",
+    actionHref: "/plan",
   },
   projects_by_phase: {
     type: "projects_by_phase",

@@ -7,7 +7,7 @@ const STORAGE_PREFIX = "cabinet-pm-dashboard-";
 
 const DEFAULT_LAYOUT: CardLayout[] = [
   { cardType: "my_tasks", position: 0 },
-  { cardType: "upcoming_deadlines", position: 1 },
+  { cardType: "upcoming_events", position: 1 },
   { cardType: "projects_by_phase", position: 2 },
 ];
 
@@ -22,7 +22,12 @@ export function getLayout(userId: string): CardLayout[] {
     if (!raw) return getDefaultLayout();
     const parsed = JSON.parse(raw) as CardLayout[];
     if (!Array.isArray(parsed) || parsed.length === 0) return getDefaultLayout();
-    return parsed.sort((a, b) => a.position - b.position);
+    // Migrate renamed card types
+    const migrated = parsed.map((c) => ({
+      ...c,
+      cardType: c.cardType === "upcoming_deadlines" ? "upcoming_events" : c.cardType,
+    }));
+    return migrated.sort((a, b) => a.position - b.position);
   } catch {
     return getDefaultLayout();
   }
