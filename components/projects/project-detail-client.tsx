@@ -38,6 +38,7 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskRoom, setNewTaskRoom] = useState<string>("");
   const [newTaskAssignee, setNewTaskAssignee] = useState<string>("");
+  const [newTaskRoomGroup, setNewTaskRoomGroup] = useState<string>("");
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -144,6 +145,7 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
         title: newTaskTitle.trim(),
         project_id: project.id,
         room_id: newTaskRoom || null,
+        room_group_id: newTaskRoomGroup || null,
         assigned_to: newTaskAssignee || null,
         created_by: user.user.id,
       })
@@ -513,6 +515,10 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
                     {task.title}
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-2">
+                    {task.room_group_id && (() => {
+                      const group = roomGroups.find((g) => g.id === task.room_group_id);
+                      return group ? <span className="text-xs px-1.5 py-0.5 rounded bg-muted">{group.name}</span> : null;
+                    })()}
                     {room && <span>{room.name}</span>}
                     {assignee && <span>· {assignee.full_name}</span>}
                     {task.due_date && <span>· Due {format(new Date(task.due_date), "MMM d")}</span>}
@@ -532,6 +538,14 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
             className="w-full h-8 px-3 text-sm rounded-md border bg-background"
           />
           <div className="flex gap-2">
+            <select
+              value={newTaskRoomGroup}
+              onChange={(e) => setNewTaskRoomGroup(e.target.value)}
+              className="flex-1 h-8 px-2 text-xs rounded-md border bg-background"
+            >
+              <option value="">No group</option>
+              {roomGroups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+            </select>
             <select
               value={newTaskRoom}
               onChange={(e) => setNewTaskRoom(e.target.value)}

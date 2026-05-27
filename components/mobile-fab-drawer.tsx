@@ -24,6 +24,7 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
   // Quick task form state
   const [title, setTitle] = useState("");
   const [taskProjectId, setTaskProjectId] = useState(projectId || "");
+  const [taskRoomGroupId, setTaskRoomGroupId] = useState("");
   const [assignee, setAssignee] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [saving, setSaving] = useState(false);
@@ -34,6 +35,7 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
   // Options loaded from Supabase
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
   const [profiles, setProfiles] = useState<{ id: string; full_name: string }[]>([]);
+  const [roomGroups, setRoomGroups] = useState<{ id: string; name: string }[]>([]);
   const [optionsLoaded, setOptionsLoaded] = useState(false);
 
   // Reset state when drawer opens
@@ -45,6 +47,7 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
       setDueDate("");
       setAssignee("");
       setTaskProjectId(projectId || "");
+      setTaskRoomGroupId("");
       setSaving(false);
     }
   }, [open, initialMode, projectId]);
@@ -66,6 +69,13 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
     });
   }, [open, optionsLoaded, supabase]);
 
+  // Load room groups when project selection changes
+  useEffect(() => {
+    if (!taskProjectId) { setRoomGroups([]); return; }
+    supabase.from("room_groups").select("id, name").eq("project_id", taskProjectId).order("sort_order")
+      .then(({ data }) => setRoomGroups(data || []));
+  }, [taskProjectId, supabase]);
+
   async function addTask() {
     if (!title.trim() || saving) return;
     setSaving(true);
@@ -79,6 +89,7 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
       title: title.trim(),
       project_id: taskProjectId || null,
       room_id: null,
+      room_group_id: taskRoomGroupId || null,
       assigned_to: isPersonal ? user.id : assignee || null,
       due_date: dueDate || null,
       created_by: user.id,
@@ -227,6 +238,16 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
                     </option>
                   ))}
                 </select>
+                {roomGroups.length > 0 && (
+                  <select
+                    value={taskRoomGroupId}
+                    onChange={(e) => setTaskRoomGroupId(e.target.value)}
+                    className="w-full h-10 px-2 text-sm rounded-md border bg-background"
+                  >
+                    <option value="">No group</option>
+                    {roomGroups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                  </select>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                   <select
                     value={assignee}
