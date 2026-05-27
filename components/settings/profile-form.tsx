@@ -13,6 +13,7 @@ interface ProfileFormProps {
   avatarUrl: string | null;
   themePref: "light" | "dark" | "system";
   densityPref: "compact" | "comfortable";
+  showRoomGroupsPref: boolean;
 }
 
 export function ProfileForm({
@@ -22,6 +23,7 @@ export function ProfileForm({
   avatarUrl: initialAvatar,
   themePref,
   densityPref: initialDensity,
+  showRoomGroupsPref: initialShowRoomGroups,
 }: ProfileFormProps) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
@@ -31,6 +33,7 @@ export function ProfileForm({
   const [name, setName] = useState(initialName || "");
   const [avatarUrl, setAvatarUrl] = useState(initialAvatar || "");
   const [density, setDensity] = useState(initialDensity);
+  const [showRoomGroups, setShowRoomGroups] = useState(initialShowRoomGroups);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -96,6 +99,11 @@ export function ProfileForm({
       document.documentElement.classList.remove("density-compact");
     }
     supabase.from("profiles").update({ density_preference: newDensity }).eq("id", userId);
+  }
+
+  function handleShowRoomGroupsChange(value: boolean) {
+    setShowRoomGroups(value);
+    supabase.from("profiles").update({ show_room_groups: value }).eq("id", userId);
   }
 
   async function handleSignOut() {
@@ -216,6 +224,28 @@ export function ProfileForm({
               ))}
             </div>
             <p className="text-xs text-muted-foreground mt-1.5">Adjusts padding and spacing. Font sizes stay the same.</p>
+          </div>
+
+          {/* Room groups on year plan */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Year plan detail</label>
+            <div className="inline-flex items-center rounded-md border p-0.5">
+              {([true, false] as const).map((opt) => (
+                <button
+                  key={String(opt)}
+                  type="button"
+                  onClick={() => handleShowRoomGroupsChange(opt)}
+                  className={`h-8 px-3 text-xs rounded font-medium transition-colors ${
+                    showRoomGroups === opt
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {opt ? "Show groups" : "Projects only"}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1.5">Show room group sub-bars on the year plan Gantt.</p>
           </div>
         </div>
       </section>
