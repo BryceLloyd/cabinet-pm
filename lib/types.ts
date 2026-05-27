@@ -18,6 +18,7 @@ export interface Phase {
   color: string;
   is_default: boolean;
   created_at: string;
+  archived_at: string | null;
 }
 
 export interface Project {
