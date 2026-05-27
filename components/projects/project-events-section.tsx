@@ -71,6 +71,7 @@ export function ProjectEventsSection({ projectId, initialEvents, eventTypes, roo
     setSaving(true);
 
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSaving(false); return; }
     const { data, error } = await supabase
       .from("calendar_events")
       .insert({
@@ -80,7 +81,7 @@ export function ProjectEventsSection({ projectId, initialEvents, eventTypes, roo
         project_id: projectId,
         room_group_id: form.room_group_id || null,
         notes: form.notes.trim() || null,
-        created_by: user!.id,
+        created_by: user.id,
       })
       .select("*")
       .single();
@@ -279,7 +280,7 @@ function EventForm({
             type="date"
             value={form.event_date}
             onChange={(e) => setForm({ ...form, event_date: e.target.value })}
-            className="w-full h-8 px-2 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            className="w-full h-8 px-2 rounded-md border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
         <div>

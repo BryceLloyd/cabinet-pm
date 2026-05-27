@@ -47,7 +47,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b bg-background">
+      <header className="sticky top-0 z-50 border-b bg-background">
         <div className="container flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
             <Link href="/dashboard" className="flex items-center gap-2 shrink-0">

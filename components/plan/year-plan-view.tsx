@@ -585,6 +585,7 @@ function QuickAddEvent({
     setSaving(true);
 
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSaving(false); return; }
     const { data, error } = await supabase
       .from("calendar_events")
       .insert({
@@ -593,7 +594,7 @@ function QuickAddEvent({
         event_type_id: typeId || null,
         project_id: projectId || null,
         room_group_id: groupId || null,
-        created_by: user!.id,
+        created_by: user.id,
       })
       .select("*")
       .single();

@@ -79,6 +79,7 @@ function SortableGroupRow({
         <button
           {...attributes}
           {...listeners}
+          aria-label="Drag to reorder"
           className="touch-none cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground shrink-0"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -149,7 +150,7 @@ function SortableGroupRow({
                   onChange={() =>
                     onToggleRoom(r.id, r.room_group_id === group.id ? null : group.id)
                   }
-                  className="size-3.5 rounded border-input"
+                  className="size-4 rounded border-input"
                 />
                 {r.name}
               </label>
@@ -398,7 +399,7 @@ export function RoomGroupManager({ projectId, groups, rooms, phases, onGroupsCha
                     type="checkbox"
                     checked={selectedRoomIds.has(r.id)}
                     onChange={() => toggleRoomSelection(r.id)}
-                    className="size-3.5 rounded border-input"
+                    className="size-4 rounded border-input"
                   />
                   {r.name}
                 </label>
