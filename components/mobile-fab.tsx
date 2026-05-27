@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { MobileFabDrawer } from "@/components/mobile-fab-drawer";
 
-export type FabDrawerMode = "dashboard-picker" | "project-picker" | "quick-task";
+export type FabDrawerMode = "dashboard-picker" | "project-picker" | "quick-task" | "quick-event";
 
 type FabConfig = {
   label: string;
@@ -23,7 +23,7 @@ function getFabConfig(pathname: string): FabConfig | null {
     return { label: "Add", action: "drawer", drawerMode: "dashboard-picker" };
   }
   if (pathname === "/plan" || pathname.startsWith("/plan?")) {
-    return { label: "New project", action: "navigate", href: "/projects/new" };
+    return { label: "Add event", action: "drawer", drawerMode: "quick-event" };
   }
   if (pathname === "/projects") {
     return { label: "New project", action: "navigate", href: "/projects/new" };

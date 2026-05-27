@@ -133,9 +133,7 @@ export function YearPlanView({ year, initialView, projects, phases, roomGroups, 
       ) : view === "gantt" ? (
         <GanttView year={year} projects={projects} phaseMap={phaseMap} scrollTrigger={scrollTrigger}
           showRoomGroups={showRoomGroups} expanded={expanded} toggleExpand={toggleExpand}
-          groupsByProject={groupsByProject} plansByGroup={plansByGroup}
-          eventTypes={eventTypes} roomGroups={roomGroups}
-          onEventAdded={(e) => setEvents((prev) => [...prev, e])} />
+          groupsByProject={groupsByProject} plansByGroup={plansByGroup} />
       ) : (
         <CalendarView year={year} projects={projects} phaseMap={phaseMap} scrollTrigger={scrollTrigger}
           events={events} eventTypeMap={eventTypeMap} eventTypes={eventTypes}
@@ -153,15 +151,11 @@ export function YearPlanView({ year, initialView, projects, phases, roomGroups, 
 function GanttView({
   year, projects, phaseMap, scrollTrigger,
   showRoomGroups, expanded, toggleExpand, groupsByProject, plansByGroup,
-  eventTypes, roomGroups, onEventAdded,
 }: {
   year: number; projects: Project[]; phaseMap: Map<string, Phase>; scrollTrigger: number;
   showRoomGroups: boolean; expanded: Set<string>; toggleExpand: (id: string) => void;
   groupsByProject: Map<string, RoomGroup[]>; plansByGroup: Map<string, PhasePlan[]>;
-  eventTypes: EventType[]; roomGroups: RoomGroup[];
-  onEventAdded: (e: CalendarEvent) => void;
 }) {
-  const [quickAdd, setQuickAdd] = useState<{ date: string } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [containerW, setContainerW] = useState(0);
@@ -448,36 +442,15 @@ function GanttView({
         </div>
       </div>
 
-      <div className="px-3 py-2 border-t flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
-          <span>Phases:</span>
-          {Array.from(phaseMap.values()).map((p) => (
-            <span key={p.id} className="inline-flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: p.color }} />
-              {p.name}
-            </span>
-          ))}
-        </div>
-        <button
-          onClick={() => setQuickAdd({ date: format(new Date(), "yyyy-MM-dd") })}
-          className="h-7 px-2.5 inline-flex items-center gap-1 rounded-md border text-xs text-muted-foreground hover:text-foreground hover:bg-muted"
-        >
-          <CalendarPlus size={13} />
-          Add event
-        </button>
+      <div className="px-3 py-2 border-t flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
+        <span>Phases:</span>
+        {Array.from(phaseMap.values()).map((p) => (
+          <span key={p.id} className="inline-flex items-center gap-1">
+            <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: p.color }} />
+            {p.name}
+          </span>
+        ))}
       </div>
-
-      {quickAdd && (
-        <QuickAddEvent
-          date={quickAdd.date}
-          projects={projects}
-          eventTypes={eventTypes}
-          roomGroups={roomGroups}
-          groupsByProject={groupsByProject}
-          onClose={() => setQuickAdd(null)}
-          onAdded={(e) => { onEventAdded(e); setQuickAdd(null); }}
-        />
-      )}
     </div>
   );
 }

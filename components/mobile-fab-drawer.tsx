@@ -4,10 +4,13 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Drawer } from "vaul";
 import { createClient } from "@/lib/supabase/client";
-import { FolderKanban, CheckSquare, DoorOpen } from "lucide-react";
+import { FolderKanban, CheckSquare, DoorOpen, CalendarPlus } from "lucide-react";
+import { format } from "date-fns";
 import type { FabDrawerMode } from "@/components/mobile-fab";
 
 type DrawerView = FabDrawerMode | "add-room";
+
+type EventTypeOption = { id: string; name: string; color: string };
 
 interface Props {
   open: boolean;
@@ -29,6 +32,14 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
   const [dueDate, setDueDate] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Quick event form state
+  const [eventTitle, setEventTitle] = useState("");
+  const [eventDate, setEventDate] = useState("");
+  const [eventTypeId, setEventTypeId] = useState("");
+  const [eventProjectId, setEventProjectId] = useState(projectId || "");
+  const [eventRoomGroupId, setEventRoomGroupId] = useState("");
+  const [eventNotes, setEventNotes] = useState("");
+
   // Add room form state
   const [roomName, setRoomName] = useState("");
 
@@ -36,6 +47,8 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
   const [profiles, setProfiles] = useState<{ id: string; full_name: string }[]>([]);
   const [roomGroups, setRoomGroups] = useState<{ id: string; name: string }[]>([]);
+  const [eventTypes, setEventTypes] = useState<EventTypeOption[]>([]);
+  const [eventRoomGroups, setEventRoomGroups] = useState<{ id: string; name: string }[]>([]);
   const [optionsLoaded, setOptionsLoaded] = useState(false);
 
   // Reset state when drawer opens
@@ -48,11 +61,17 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
       setAssignee("");
       setTaskProjectId(projectId || "");
       setTaskRoomGroupId("");
+      setEventTitle("");
+      setEventDate(format(new Date(), "yyyy-MM-dd"));
+      setEventTypeId("");
+      setEventProjectId(projectId || "");
+      setEventRoomGroupId("");
+      setEventNotes("");
       setSaving(false);
     }
   }, [open, initialMode, projectId]);
 
-  // Load project/profile options when needed
+  // Load project/profile/event-type options when needed
   useEffect(() => {
     if (!open || optionsLoaded) return;
     Promise.all([
@@ -62,19 +81,32 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
         .in("status", ["planning", "active"])
         .order("name"),
       supabase.from("profiles").select("id, full_name").order("full_name"),
-    ]).then(([{ data: p }, { data: pr }]) => {
+      supabase
+        .from("event_types")
+        .select("id, name, color")
+        .is("archived_at", null)
+        .order("sort_order"),
+    ]).then(([{ data: p }, { data: pr }, { data: et }]) => {
       setProjects(p || []);
       setProfiles(pr || []);
+      setEventTypes(et || []);
       setOptionsLoaded(true);
     });
   }, [open, optionsLoaded, supabase]);
 
-  // Load room groups when project selection changes
+  // Load room groups when task project selection changes
   useEffect(() => {
     if (!taskProjectId) { setRoomGroups([]); return; }
     supabase.from("room_groups").select("id, name").eq("project_id", taskProjectId).order("sort_order")
       .then(({ data }) => setRoomGroups(data || []));
   }, [taskProjectId, supabase]);
+
+  // Load room groups when event project selection changes
+  useEffect(() => {
+    if (!eventProjectId) { setEventRoomGroups([]); setEventRoomGroupId(""); return; }
+    supabase.from("room_groups").select("id, name").eq("project_id", eventProjectId).order("sort_order")
+      .then(({ data }) => setEventRoomGroups(data || []));
+  }, [eventProjectId, supabase]);
 
   async function addTask() {
     if (!title.trim() || saving) return;
@@ -136,6 +168,31 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
     }
   }
 
+  async function addEvent() {
+    if (!eventTitle.trim() || !eventDate || saving) return;
+    setSaving(true);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) { setSaving(false); return; }
+
+    const { error } = await supabase.from("calendar_events").insert({
+      title: eventTitle.trim(),
+      event_date: eventDate,
+      event_type_id: eventTypeId || null,
+      project_id: eventProjectId || null,
+      room_group_id: eventRoomGroupId || null,
+      notes: eventNotes.trim() || null,
+      created_by: user.id,
+    });
+
+    setSaving(false);
+    if (!error) {
+      onOpenChange(false);
+      router.refresh();
+    }
+  }
+
   return (
     <Drawer.Root open={open} onOpenChange={onOpenChange}>
       <Drawer.Portal>
@@ -172,6 +229,18 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
                     <div className="text-sm font-medium">New task</div>
                     <div className="text-xs text-muted-foreground">
                       Add a task or personal todo
+                    </div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setView("quick-event")}
+                  className="w-full flex items-center gap-3 p-4 rounded-lg border hover:bg-muted transition-colors"
+                >
+                  <CalendarPlus size={20} className="text-muted-foreground shrink-0" />
+                  <div className="text-left">
+                    <div className="text-sm font-medium">Add event</div>
+                    <div className="text-xs text-muted-foreground">
+                      Add a calendar event
                     </div>
                   </div>
                 </button>
@@ -299,6 +368,78 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
                   className="w-full h-10 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50"
                 >
                   {saving ? "Adding…" : "Add room"}
+                </button>
+              </div>
+            )}
+
+            {/* Quick event form */}
+            {view === "quick-event" && (
+              <div className="space-y-3">
+                <Drawer.Title className="text-base font-semibold">Add event</Drawer.Title>
+                <input
+                  value={eventTitle}
+                  onChange={(e) => setEventTitle(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addEvent()}
+                  placeholder="e.g. Template day, Worktop install"
+                  className="w-full h-10 px-3 text-sm rounded-md border bg-background"
+                  autoFocus
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="date"
+                    value={eventDate}
+                    onChange={(e) => setEventDate(e.target.value)}
+                    className="h-10 px-2 text-sm rounded-md border bg-background"
+                  />
+                  <select
+                    value={eventTypeId}
+                    onChange={(e) => setEventTypeId(e.target.value)}
+                    className="h-10 px-2 text-sm rounded-md border bg-background"
+                  >
+                    <option value="">No type</option>
+                    {eventTypes.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <select
+                  value={eventProjectId}
+                  onChange={(e) => { setEventProjectId(e.target.value); setEventRoomGroupId(""); }}
+                  className="w-full h-10 px-2 text-sm rounded-md border bg-background"
+                >
+                  <option value="">No project</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+                {eventRoomGroups.length > 0 && (
+                  <select
+                    value={eventRoomGroupId}
+                    onChange={(e) => setEventRoomGroupId(e.target.value)}
+                    className="w-full h-10 px-2 text-sm rounded-md border bg-background"
+                  >
+                    <option value="">No room group</option>
+                    {eventRoomGroups.map((g) => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </select>
+                )}
+                <input
+                  value={eventNotes}
+                  onChange={(e) => setEventNotes(e.target.value)}
+                  placeholder="Notes (optional)"
+                  className="w-full h-10 px-3 text-sm rounded-md border bg-background"
+                />
+                <button
+                  onClick={addEvent}
+                  disabled={!eventTitle.trim() || !eventDate || saving}
+                  className="w-full h-10 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50"
+                >
+                  {saving ? "Adding…" : "Add event"}
                 </button>
               </div>
             )}
