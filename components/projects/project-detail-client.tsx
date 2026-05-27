@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import type { Project, Room, Task, Phase, Profile, ProjectStatus } from "@/lib/types";
+import type { Project, Room, Task, Phase, Profile, ProjectStatus, RoomGroup } from "@/lib/types";
+import { RoomGroupManager } from "@/components/projects/room-group-manager";
 import { format, addWeeks } from "date-fns";
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
   initialTasks: Task[];
   phases: Phase[];
   profiles: Pick<Profile, "id" | "full_name">[];
+  initialRoomGroups: RoomGroup[];
 }
 
 const STATUSES: { value: ProjectStatus; label: string }[] = [
@@ -22,12 +24,13 @@ const STATUSES: { value: ProjectStatus; label: string }[] = [
   { value: "cancelled", label: "Cancelled" },
 ];
 
-export function ProjectDetailClient({ project: initialProject, initialRooms, initialTasks, phases, profiles }: Props) {
+export function ProjectDetailClient({ project: initialProject, initialRooms, initialTasks, phases, profiles, initialRoomGroups }: Props) {
   const router = useRouter();
   const supabase = createClient();
   const [project, setProject] = useState(initialProject);
   const [rooms, setRooms] = useState(initialRooms);
   const [tasks, setTasks] = useState(initialTasks);
+  const [roomGroups, setRoomGroups] = useState(initialRoomGroups);
   const [newRoomName, setNewRoomName] = useState("");
   const [editingRoom, setEditingRoom] = useState<string | null>(null);
   const [editRoomForm, setEditRoomForm] = useState({ name: "", notes: "" });
@@ -48,6 +51,13 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
 
   const phaseMap = new Map(phases.map((p) => [p.id, p]));
   const profileMap = new Map(profiles.map((p) => [p.id, p]));
+
+  const roomCountMap: Record<string, number> = {};
+  rooms.forEach((r) => {
+    if (r.room_group_id) {
+      roomCountMap[r.room_group_id] = (roomCountMap[r.room_group_id] || 0) + 1;
+    }
+  });
 
   async function addRoom() {
     if (!newRoomName.trim()) return;
@@ -80,6 +90,16 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
       .eq("id", roomId);
     if (!error) {
       setRooms(rooms.map((r) => (r.id === roomId ? { ...r, current_phase_id: phaseId } : r)));
+    }
+  }
+
+  async function changeRoomGroup(roomId: string, groupId: string | null) {
+    const { error } = await supabase
+      .from("rooms")
+      .update({ room_group_id: groupId })
+      .eq("id", roomId);
+    if (!error) {
+      setRooms(rooms.map((r) => (r.id === roomId ? { ...r, room_group_id: groupId } : r)));
     }
   }
 
@@ -326,6 +346,15 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
         </div>
       )}
 
+      {/* Room Groups */}
+      <section className="lg:col-span-5">
+        <RoomGroupManager
+          projectId={project.id}
+          initialGroups={roomGroups}
+          roomCountMap={roomCountMap}
+        />
+      </section>
+
     <div className="grid lg:grid-cols-5 gap-6">
       {/* Rooms */}
       <section className="lg:col-span-3 rounded-lg border bg-card">
@@ -390,6 +419,16 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
                   {room.notes && <div className="text-xs text-muted-foreground mt-0.5">{room.notes}</div>}
                 </div>
                 <div className="flex items-center gap-2">
+                  <select
+                    value={room.room_group_id || ""}
+                    onChange={(e) => changeRoomGroup(room.id, e.target.value || null)}
+                    className="h-7 px-2 text-xs rounded-md border bg-background"
+                  >
+                    <option value="">No group</option>
+                    {roomGroups.map((g) => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </select>
                   <select
                     value={room.current_phase_id || ""}
                     onChange={(e) => changeRoomPhase(room.id, e.target.value)}

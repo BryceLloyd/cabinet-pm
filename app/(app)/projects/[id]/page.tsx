@@ -7,7 +7,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: project }, { data: rooms }, { data: tasks }, { data: phases }, { data: profiles }] =
+  const [{ data: project }, { data: rooms }, { data: tasks }, { data: phases }, { data: profiles }, { data: roomGroups }] =
     await Promise.all([
       supabase.from("projects").select("*").eq("id", id).maybeSingle(),
       supabase.from("rooms").select("*").eq("project_id", id).order("sort_order"),
@@ -19,6 +19,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         .order("due_date", { ascending: true, nullsFirst: false }),
       supabase.from("phases").select("*").is("archived_at", null).order("sort_order"),
       supabase.from("profiles").select("id, full_name"),
+      supabase.from("room_groups").select("*").eq("project_id", id).order("sort_order"),
     ]);
 
   if (!project) notFound();
@@ -35,6 +36,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         initialTasks={tasks || []}
         phases={phases || []}
         profiles={profiles || []}
+        initialRoomGroups={roomGroups || []}
       />
     </div>
   );
