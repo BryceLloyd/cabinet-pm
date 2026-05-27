@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -21,13 +21,22 @@ export function YearPlanView({ year, initialView, projects, phases }: Props) {
   const router = useRouter();
   const sp = useSearchParams();
   const [view, setView] = useState(initialView);
+  const [scrollTrigger, setScrollTrigger] = useState(0);
 
   const phaseMap = useMemo(() => new Map(phases.map((p) => [p.id, p])), [phases]);
+  const currentYear = new Date().getFullYear();
 
   function setQuery(updates: Record<string, string>) {
     const next = new URLSearchParams(sp);
     Object.entries(updates).forEach(([k, v]) => next.set(k, v));
     router.push(`/plan?${next.toString()}`);
+  }
+
+  function handleToday() {
+    if (year !== currentYear) {
+      setQuery({ year: String(currentYear) });
+    }
+    setScrollTrigger((n) => n + 1);
   }
 
   return (
@@ -61,10 +70,10 @@ export function YearPlanView({ year, initialView, projects, phases }: Props) {
                 className={`h-7 px-3 text-xs rounded ${view === "calendar" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
               >Calendar</button>
             </div>
-            <Link
-              href="/projects/new"
-              className="h-8 px-3 inline-flex items-center rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90"
-            >New project</Link>
+            <button
+              onClick={handleToday}
+              className="h-8 px-3 inline-flex items-center rounded-md border text-xs font-medium hover:bg-muted"
+            >Today</button>
           </div>
         </div>
       </div>
@@ -77,9 +86,9 @@ export function YearPlanView({ year, initialView, projects, phases }: Props) {
           </Link>
         </div>
       ) : view === "gantt" ? (
-        <GanttView year={year} projects={projects} phaseMap={phaseMap} />
+        <GanttView year={year} projects={projects} phaseMap={phaseMap} scrollTrigger={scrollTrigger} />
       ) : (
-        <CalendarView year={year} projects={projects} phaseMap={phaseMap} />
+        <CalendarView year={year} projects={projects} phaseMap={phaseMap} scrollTrigger={scrollTrigger} />
       )}
     </div>
   );
@@ -89,8 +98,8 @@ export function YearPlanView({ year, initialView, projects, phases }: Props) {
 // Gantt: SVG-based timeline, one row per project, spans start_date → completion.
 // ─────────────────────────────────────────────────────────────────────────────
 function GanttView({
-  year, projects, phaseMap,
-}: { year: number; projects: Project[]; phaseMap: Map<string, Phase> }) {
+  year, projects, phaseMap, scrollTrigger,
+}: { year: number; projects: Project[]; phaseMap: Map<string, Phase>; scrollTrigger: number }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [containerW, setContainerW] = useState(0);
@@ -123,14 +132,12 @@ function GanttView({
   const height = HEADER_H + projects.length * ROW_H;
   const truncLen = isMobile ? 8 : (LABEL_W > 160 ? 28 : 14);
 
-  // Auto-scroll timeline to today on mobile
+  // Auto-scroll timeline so the current month starts at the left edge (mobile)
   useEffect(() => {
     if (!isMobile || !todayInRange || !scrollRef.current) return;
-    const todayX = differenceInDays(today, yearStart) * dayW;
-    // Scroll so today is ~20% from left edge of timeline viewport
-    const scrollTo = Math.max(0, todayX - timelineViewport * 0.2);
-    scrollRef.current.scrollLeft = scrollTo;
-  }, [isMobile, todayInRange, containerW]); // eslint-disable-line react-hooks/exhaustive-deps
+    const monthStartX = differenceInDays(startOfMonth(today), yearStart) * dayW;
+    scrollRef.current.scrollLeft = monthStartX;
+  }, [isMobile, todayInRange, containerW, scrollTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Desktop: single SVG, all-in-one
   if (!isMobile) {
@@ -290,20 +297,25 @@ function GanttView({
 // Calendar: 12-month grid, projects show on their completion date.
 // ─────────────────────────────────────────────────────────────────────────────
 function CalendarView({
-  year, projects, phaseMap,
-}: { year: number; projects: Project[]; phaseMap: Map<string, Phase> }) {
+  year, projects, phaseMap, scrollTrigger,
+}: { year: number; projects: Project[]; phaseMap: Map<string, Phase>; scrollTrigger: number }) {
   const todayMonthRef = useRef<HTMLDivElement>(null);
   const months = eachMonthOfInterval({
     start: new Date(year, 0, 1),
     end: new Date(year, 11, 1),
   });
 
-  // Jump to current month immediately (no animation) before paint
-  useLayoutEffect(() => {
-    if (todayMonthRef.current) {
-      todayMonthRef.current.scrollIntoView({ behavior: "instant", block: "start" });
-    }
-  }, [year]);
+  // Scroll to current month after Next.js scroll restoration settles
+  useEffect(() => {
+    if (!todayMonthRef.current) return;
+    const timer = setTimeout(() => {
+      if (!todayMonthRef.current) return;
+      const rect = todayMonthRef.current.getBoundingClientRect();
+      const scrollTop = window.scrollY + rect.top - 80;
+      window.scrollTo({ top: Math.max(0, scrollTop), behavior: "instant" });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [year, scrollTrigger]);
 
   const today = new Date();
   const todayMonthIndex = year === today.getFullYear() ? today.getMonth() : -1;
@@ -353,7 +365,7 @@ const MonthCard = forwardRef<HTMLDivElement, {
   }
 
   return (
-    <div ref={ref} className={`rounded-lg border bg-card ${isCurrentMonth ? "ring-2 ring-primary" : ""}`}>
+    <div ref={ref} className={`rounded-lg bg-card ${isCurrentMonth ? "border-2 border-primary" : "border"}`}>
       <div className={`px-4 py-2.5 border-b ${isCurrentMonth ? "bg-primary/5" : ""}`}>
         <h3 className="font-medium text-sm">{format(month, "MMMM")}</h3>
       </div>
