@@ -15,8 +15,8 @@ export function BottomTabBar() {
   const pathname = usePathname();
 
   return (
-    <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t bg-background">
-      <div className="flex items-center justify-around h-14">
+    <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t bg-background pb-[env(safe-area-inset-bottom)]">
+      <div className="flex items-center justify-around h-[72px]">
         {TABS.map((tab) => {
           const isActive = pathname === tab.href || pathname.startsWith(tab.matchPath || tab.href);
           const Icon = tab.icon;
@@ -24,14 +24,20 @@ export function BottomTabBar() {
             <Link
               key={tab.label}
               href={tab.href}
-              className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full text-[10px] transition-colors ${
-                isActive
-                  ? "text-foreground"
-                  : "text-muted-foreground"
-              }`}
+              className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full"
             >
-              <Icon size={20} strokeWidth={isActive ? 2.25 : 1.75} />
-              <span className={isActive ? "font-medium" : ""}>{tab.label}</span>
+              <span
+                className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors ${
+                  isActive
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground"
+                }`}
+              >
+                <Icon size={24} strokeWidth={isActive ? 2.25 : 1.75} />
+                <span className={`text-[11px] ${isActive ? "font-medium" : ""}`}>
+                  {tab.label}
+                </span>
+              </span>
             </Link>
           );
         })}
