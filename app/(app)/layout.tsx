@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { UserMenu } from "@/components/user-menu";
 import { BottomTabBar } from "@/components/bottom-tab-bar";
 import { PageTitle } from "@/components/page-title";
+import { MobileFab } from "@/components/mobile-fab";
 
 const NAV = [
   { href: "/dashboard" as const, label: "Dashboard" },
@@ -80,6 +81,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
       </header>
       <main className="flex-1 pb-20 md:pb-0">{children}</main>
       <BottomTabBar />
+      <MobileFab />
     </div>
   );
 }
