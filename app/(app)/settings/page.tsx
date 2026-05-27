@@ -1,88 +1,37 @@
-import { createClient } from "@/lib/supabase/server";
-import { InviteManager } from "@/components/settings/invite-manager";
-import { SetPassword } from "@/components/settings/set-password";
-import { BusinessInfoForm } from "@/components/settings/business-info-form";
-import { PhaseManager } from "@/components/settings/phase-manager";
-import type { BusinessInfo } from "@/lib/types";
+import Link from "next/link";
+import { User, Building2, Users, Layers, ChevronRight } from "lucide-react";
+import { SettingsDesktopRedirect } from "./desktop-redirect";
 
-export default async function SettingsPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const [{ data: profiles }, { data: phases }, { data: profile }, { data: businessInfo }] = await Promise.all([
-    supabase.from("profiles").select("*").order("created_at"),
-    supabase.from("phases").select("*").order("sort_order"),
-    supabase.from("profiles").select("role").eq("id", user!.id).single(),
-    supabase.from("business_info").select("*").eq("id", 1).single(),
-  ]);
+const SETTINGS_SECTIONS = [
+  { href: "/settings/profile", label: "Profile", description: "Name, avatar, appearance", icon: User },
+  { href: "/settings/business", label: "Business", description: "Company info and branding", icon: Building2 },
+  { href: "/settings/team", label: "Team", description: "Members and permissions", icon: Users },
+  { href: "/settings/phases", label: "Phases", description: "Project phase pipeline", icon: Layers },
+] as const;
 
-  const isAdmin = profile?.role === "admin";
-
-  const biz: BusinessInfo = businessInfo || {
-    id: 1, name: "", logo_url: null, address: null, phone: null,
-    email: null, workshop_photo_url: null, updated_at: "",
-  };
-
+export default function SettingsIndexPage() {
   return (
-    <div className="container py-6 md:py-8 px-4 max-w-3xl">
-
-      {/* Business info */}
-      <section className="rounded-lg border bg-card mb-6">
-        <div className="px-5 py-3.5 border-b">
-          <h2 className="font-medium">Business info</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Appears on the login screen, nav bar, and dashboard.
-          </p>
-        </div>
-        <div className="px-5 py-4">
-          <BusinessInfoForm initial={biz} isAdmin={isAdmin} />
-        </div>
-      </section>
-
-      {/* Set password */}
-      <section className="rounded-lg border bg-card mb-6">
-        <div className="px-5 py-3.5 border-b">
-          <h2 className="font-medium">Your password</h2>
-        </div>
-        <div className="px-5 py-4">
-          <SetPassword />
-        </div>
-      </section>
-
-      {/* Team members */}
-      <section className="rounded-lg border bg-card mb-6">
-        <div className="px-5 py-3.5 border-b">
-          <h2 className="font-medium">Team</h2>
-        </div>
-        <ul className="divide-y">
-          {(profiles || []).map((p) => (
-            <li key={p.id} className="px-5 py-3 flex items-center justify-between">
-              <div>
-                <div className="text-sm font-medium">{p.full_name || "—"}</div>
-                <div className="text-xs text-muted-foreground">{p.id.slice(0, 8)}…</div>
+    <>
+      <SettingsDesktopRedirect />
+      <div className="space-y-1 md:hidden">
+        {SETTINGS_SECTIONS.map((section) => {
+          const Icon = section.icon;
+          return (
+            <Link
+              key={section.href}
+              href={section.href}
+              className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 hover:bg-muted transition-colors"
+            >
+              <Icon size={18} className="text-muted-foreground shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium">{section.label}</div>
+                <div className="text-xs text-muted-foreground">{section.description}</div>
               </div>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-muted capitalize">{p.role}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* Invite management — admin only */}
-      {isAdmin && (
-        <section className="rounded-lg border bg-card mb-6">
-          <div className="px-5 py-3.5 border-b">
-            <h2 className="font-medium">Allowed emails</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Only these emails can sign up. Add someone before they create an account.
-            </p>
-          </div>
-          <div className="px-5 py-4">
-            <InviteManager />
-          </div>
-        </section>
-      )}
-
-      {/* Phases */}
-      <PhaseManager initialPhases={phases || []} isAdmin={isAdmin} />
-    </div>
+              <ChevronRight size={16} className="text-muted-foreground shrink-0" />
+            </Link>
+          );
+        })}
+      </div>
+    </>
   );
 }

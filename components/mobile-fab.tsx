@@ -16,7 +16,7 @@ type FabConfig = {
 };
 
 function getFabConfig(pathname: string): FabConfig | null {
-  if (pathname === "/settings") return null;
+  if (pathname.startsWith("/settings")) return null;
   if (pathname.startsWith("/projects/new")) return null;
 
   if (pathname === "/dashboard") {
