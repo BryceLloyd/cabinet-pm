@@ -8,6 +8,9 @@ export interface Profile {
   full_name: string;
   avatar_url: string | null;
   role: "admin" | "member";
+  theme_preference: "light" | "dark" | "system";
+  density_preference: "compact" | "comfortable";
+  notification_preferences: Record<string, unknown>;
   created_at: string;
 }
 
