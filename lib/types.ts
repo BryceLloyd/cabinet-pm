@@ -111,3 +111,25 @@ export interface PhasePlan {
   created_at: string;
   updated_at: string;
 }
+
+export interface EventType {
+  id: string;
+  name: string;
+  color: string;
+  sort_order: number;
+  archived_at: string | null;
+  created_at: string;
+}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  event_date: string;
+  event_type_id: string | null;
+  project_id: string | null;
+  room_group_id: string | null;
+  notes: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
