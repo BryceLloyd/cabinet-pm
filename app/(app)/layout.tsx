@@ -5,6 +5,7 @@ import { UserMenu } from "@/components/user-menu";
 import { BottomTabBar } from "@/components/bottom-tab-bar";
 import { PageTitle } from "@/components/page-title";
 import { MobileFab } from "@/components/mobile-fab";
+import { DensityProvider } from "@/components/density-provider";
 
 const NAV = [
   { href: "/dashboard" as const, label: "Dashboard" },
@@ -19,7 +20,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
   if (!user) redirect("/login");
 
   const [{ data: profile }, { data: businessInfo }] = await Promise.all([
-    supabase.from("profiles").select("full_name, role, avatar_url").eq("id", user.id).single(),
+    supabase.from("profiles").select("full_name, role, avatar_url, density_preference").eq("id", user.id).single(),
     supabase.from("business_info").select("name, logo_url").eq("id", 1).single(),
   ]);
 
@@ -79,7 +80,11 @@ export default async function AppShell({ children }: { children: React.ReactNode
           </div>
         </div>
       </header>
-      <main className="flex-1 pb-20 md:pb-0">{children}</main>
+      <main className="flex-1 pb-20 md:pb-0">
+        <DensityProvider density={profile.density_preference || "comfortable"}>
+          {children}
+        </DensityProvider>
+      </main>
       <BottomTabBar />
       <MobileFab />
     </div>
