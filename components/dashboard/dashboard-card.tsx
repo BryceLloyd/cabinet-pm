@@ -24,7 +24,7 @@ export function DashboardCard({ title, actionLabel, actionHref, isEditing, onRem
           <X size={14} />
         </button>
       )}
-      <div className="px-5 py-3.5 border-b flex items-center justify-between">
+      <div className="border-b flex items-center justify-between" style={{ padding: "var(--density-row-padding) var(--density-card-padding)" }}>
         <h2 className="font-medium text-sm">{title}</h2>
         {actionLabel && actionHref && (
           // eslint-disable-next-line @typescript-eslint/no-explicit-any

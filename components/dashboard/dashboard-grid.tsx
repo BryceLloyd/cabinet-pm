@@ -142,7 +142,7 @@ export function DashboardGrid({ userId }: { userId: string }) {
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={activeCardTypes} strategy={rectSortingStrategy}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: "var(--density-gap)" }}>
             {cards.map((card) => (
               <SortableCard
                 key={card.cardType}
