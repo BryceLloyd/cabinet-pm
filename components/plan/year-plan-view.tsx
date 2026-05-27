@@ -8,23 +8,57 @@ import {
   format, max, min, parseISO, startOfMonth, endOfMonth,
   startOfWeek, addDays, isSameMonth, isToday,
 } from "date-fns";
-import type { Project, Phase } from "@/lib/types";
+import type { Project, Phase, RoomGroup, PhasePlan } from "@/lib/types";
 
 interface Props {
   year: number;
   initialView: "gantt" | "calendar";
   projects: Project[];
   phases: Phase[];
+  roomGroups: RoomGroup[];
+  phasePlans: PhasePlan[];
+  showRoomGroups: boolean;
 }
 
-export function YearPlanView({ year, initialView, projects, phases }: Props) {
+export function YearPlanView({ year, initialView, projects, phases, roomGroups, phasePlans, showRoomGroups }: Props) {
   const router = useRouter();
   const sp = useSearchParams();
   const [view, setView] = useState(initialView);
   const [scrollTrigger, setScrollTrigger] = useState(0);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const phaseMap = useMemo(() => new Map(phases.map((p) => [p.id, p])), [phases]);
   const currentYear = new Date().getFullYear();
+
+  const groupsByProject = useMemo(() => {
+    const map = new Map<string, RoomGroup[]>();
+    roomGroups.forEach((g) => {
+      const list = map.get(g.project_id) || [];
+      list.push(g);
+      map.set(g.project_id, list);
+    });
+    return map;
+  }, [roomGroups]);
+
+  const plansByGroup = useMemo(() => {
+    const map = new Map<string, PhasePlan[]>();
+    phasePlans.forEach((pp) => {
+      const key = pp.room_group_id || pp.project_id || "";
+      const list = map.get(key) || [];
+      list.push(pp);
+      map.set(key, list);
+    });
+    return map;
+  }, [phasePlans]);
+
+  function toggleExpand(projectId: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(projectId)) next.delete(projectId);
+      else next.add(projectId);
+      return next;
+    });
+  }
 
   function setQuery(updates: Record<string, string>) {
     const next = new URLSearchParams(sp);
@@ -86,7 +120,9 @@ export function YearPlanView({ year, initialView, projects, phases }: Props) {
           </Link>
         </div>
       ) : view === "gantt" ? (
-        <GanttView year={year} projects={projects} phaseMap={phaseMap} scrollTrigger={scrollTrigger} />
+        <GanttView year={year} projects={projects} phaseMap={phaseMap} scrollTrigger={scrollTrigger}
+          showRoomGroups={showRoomGroups} expanded={expanded} toggleExpand={toggleExpand}
+          groupsByProject={groupsByProject} plansByGroup={plansByGroup} />
       ) : (
         <CalendarView year={year} projects={projects} phaseMap={phaseMap} scrollTrigger={scrollTrigger} />
       )}
@@ -99,7 +135,12 @@ export function YearPlanView({ year, initialView, projects, phases }: Props) {
 // ─────────────────────────────────────────────────────────────────────────────
 function GanttView({
   year, projects, phaseMap, scrollTrigger,
-}: { year: number; projects: Project[]; phaseMap: Map<string, Phase>; scrollTrigger: number }) {
+  showRoomGroups, expanded, toggleExpand, groupsByProject, plansByGroup,
+}: {
+  year: number; projects: Project[]; phaseMap: Map<string, Phase>; scrollTrigger: number;
+  showRoomGroups: boolean; expanded: Set<string>; toggleExpand: (id: string) => void;
+  groupsByProject: Map<string, RoomGroup[]>; plansByGroup: Map<string, PhasePlan[]>;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [containerW, setContainerW] = useState(0);
@@ -120,6 +161,7 @@ function GanttView({
   const todayInRange = today >= yearStart && today <= yearEnd;
 
   const ROW_H = 36;
+  const SUB_ROW_H = 28;
   const HEADER_H = 32;
   const isMobile = containerW > 0 && containerW < 640;
   const LABEL_W = isMobile ? 90 : (containerW > 0 ? Math.max(100, Math.min(240, containerW * 0.2)) : 240);
@@ -129,7 +171,6 @@ function GanttView({
     ? timelineViewport * 4  // 4x = 12 months, viewport shows ~3
     : (containerW > 0 ? Math.max(600, containerW - LABEL_W) : 980);
   const dayW = TIMELINE_W / totalDays;
-  const height = HEADER_H + projects.length * ROW_H;
   const truncLen = isMobile ? 8 : (LABEL_W > 160 ? 28 : 14);
 
   // Auto-scroll timeline so the current month starts at the left edge (mobile)
@@ -138,6 +179,27 @@ function GanttView({
     const monthStartX = differenceInDays(startOfMonth(today), yearStart) * dayW;
     scrollRef.current.scrollLeft = monthStartX;
   }, [isMobile, todayInRange, containerW, scrollTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const rowOffsets = useMemo(() => {
+    const offsets: number[] = [];
+    let y = HEADER_H;
+    projects.forEach((p) => {
+      offsets.push(y);
+      y += ROW_H;
+      if (showRoomGroups && expanded.has(p.id)) {
+        const groups = groupsByProject.get(p.id) || [];
+        y += groups.length * SUB_ROW_H;
+      }
+    });
+    return offsets;
+  }, [projects, expanded, showRoomGroups, groupsByProject]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const height = rowOffsets.length > 0
+    ? rowOffsets[rowOffsets.length - 1] + ROW_H +
+      (showRoomGroups && projects.length > 0 && expanded.has(projects[projects.length - 1].id)
+        ? (groupsByProject.get(projects[projects.length - 1].id)?.length || 0) * SUB_ROW_H
+        : 0)
+    : HEADER_H;
 
   // Desktop: single SVG, all-in-one
   if (!isMobile) {
@@ -165,17 +227,30 @@ function GanttView({
             const end = min([parseISO(p.estimated_completion_date), yearEnd]);
             const x = LABEL_W + (differenceInDays(start, yearStart) * dayW);
             const w = Math.max(2, (differenceInDays(end, start) + 1) * dayW);
-            const y = HEADER_H + i * ROW_H + 8;
+            const rowY = rowOffsets[i];
+            const y = rowY + 8;
             const phase = p.current_phase_id ? phaseMap.get(p.current_phase_id) : null;
             const color = phase?.color || "#94a3b8";
+            const projGroups = groupsByProject.get(p.id) || [];
+            const isExpanded = showRoomGroups && expanded.has(p.id);
+            const hasGroups = showRoomGroups && projGroups.length > 0;
+
             return (
               <g key={p.id}>
-                <line x1={0} y1={HEADER_H + i * ROW_H} x2={LABEL_W + TIMELINE_W} y2={HEADER_H + i * ROW_H} stroke="hsl(var(--border))" strokeWidth={0.5} />
-                <text x={12} y={HEADER_H + i * ROW_H + 22} fontSize={12} className="fill-foreground" fontWeight={500}>
+                <line x1={0} y1={rowY} x2={LABEL_W + TIMELINE_W} y2={rowY} stroke="hsl(var(--border))" strokeWidth={0.5} />
+                {/* Expand chevron */}
+                {hasGroups && (
+                  <g onClick={() => toggleExpand(p.id)} className="cursor-pointer">
+                    <text x={4} y={rowY + 22} fontSize={10} className="fill-muted-foreground">
+                      {isExpanded ? "▼" : "▶"}
+                    </text>
+                  </g>
+                )}
+                <text x={hasGroups ? 16 : 12} y={rowY + 22} fontSize={12} className="fill-foreground" fontWeight={500}>
                   {p.name.length > truncLen ? p.name.slice(0, truncLen) + "…" : p.name}
                 </text>
                 {p.client_name && LABEL_W > 160 && (
-                  <text x={12} y={HEADER_H + i * ROW_H + 22} fontSize={10} className="fill-muted-foreground" textAnchor="start" dx={Math.min(160, p.name.length * 6.5 + 8)}>
+                  <text x={hasGroups ? 16 : 12} y={rowY + 22} fontSize={10} className="fill-muted-foreground" textAnchor="start" dx={Math.min(160, p.name.length * 6.5 + 8)}>
                     {p.client_name.length > 16 ? p.client_name.slice(0, 16) + "…" : p.client_name}
                   </text>
                 )}
@@ -183,6 +258,42 @@ function GanttView({
                   <rect x={x} y={y} width={w} height={20} rx={4} fill={color} fillOpacity={0.85} className="hover:fill-opacity-100 cursor-pointer" />
                   <line x1={x + w} y1={y - 2} x2={x + w} y2={y + 22} stroke={color} strokeWidth={2} />
                 </a>
+
+                {/* Sub-rows for room groups */}
+                {isExpanded && projGroups.map((g, gi) => {
+                  const subY = rowY + ROW_H + gi * SUB_ROW_H;
+                  const groupPlans = plansByGroup.get(g.id) || [];
+                  if (groupPlans.length === 0) {
+                    return (
+                      <g key={g.id}>
+                        <line x1={0} y1={subY} x2={LABEL_W + TIMELINE_W} y2={subY} stroke="hsl(var(--border))" strokeWidth={0.3} strokeDasharray="2 2" />
+                        <text x={28} y={subY + 18} fontSize={10} className="fill-muted-foreground">
+                          {g.name.length > (truncLen - 2) ? g.name.slice(0, truncLen - 2) + "…" : g.name}
+                        </text>
+                      </g>
+                    );
+                  }
+                  // Overall span: earliest start to latest end
+                  const groupStart = groupPlans.reduce((minVal, pp) => pp.start_date < minVal ? pp.start_date : minVal, groupPlans[0].start_date);
+                  const groupEnd = groupPlans.reduce((maxVal, pp) => pp.end_date > maxVal ? pp.end_date : maxVal, groupPlans[0].end_date);
+                  const gStart = max([parseISO(groupStart), yearStart]);
+                  const gEnd = min([parseISO(groupEnd), yearEnd]);
+                  const gx = LABEL_W + differenceInDays(gStart, yearStart) * dayW;
+                  const gw = Math.max(2, (differenceInDays(gEnd, gStart) + 1) * dayW);
+                  // Use first phase's color as representative
+                  const firstPlan = [...groupPlans].sort((a, b) => a.start_date.localeCompare(b.start_date))[0];
+                  const gColor = firstPlan ? (phaseMap.get(firstPlan.phase_id)?.color || "#94a3b8") : "#94a3b8";
+
+                  return (
+                    <g key={g.id}>
+                      <line x1={0} y1={subY} x2={LABEL_W + TIMELINE_W} y2={subY} stroke="hsl(var(--border))" strokeWidth={0.3} strokeDasharray="2 2" />
+                      <text x={28} y={subY + 18} fontSize={10} className="fill-muted-foreground">
+                        {g.name.length > (truncLen - 2) ? g.name.slice(0, truncLen - 2) + "…" : g.name}
+                      </text>
+                      <rect x={gx} y={subY + 4} width={gw} height={16} rx={3} fill={gColor} fillOpacity={0.6} />
+                    </g>
+                  );
+                })}
               </g>
             );
           })}
@@ -217,17 +328,30 @@ function GanttView({
         {/* Sticky label column */}
         <div className="shrink-0 border-r bg-card z-10" style={{ width: LABEL_W }}>
           <div className="h-8 border-b" />
-          {projects.map((p, i) => (
-            <div
-              key={p.id}
-              className="border-b px-2 flex items-center text-[11px] font-medium truncate"
-              style={{ height: ROW_H }}
-            >
-              <Link href={`/projects/${p.id}`} className="truncate hover:underline">
-                {p.name.length > truncLen ? p.name.slice(0, truncLen) + "…" : p.name}
-              </Link>
-            </div>
-          ))}
+          {projects.map((p, i) => {
+            const projGroups = groupsByProject.get(p.id) || [];
+            const isExpanded = showRoomGroups && expanded.has(p.id);
+            const hasGroups = showRoomGroups && projGroups.length > 0;
+            return (
+              <div key={p.id}>
+                <div
+                  className="border-b px-2 flex items-center gap-1 text-[11px] font-medium truncate"
+                  style={{ height: ROW_H }}
+                  onClick={hasGroups ? () => toggleExpand(p.id) : undefined}
+                >
+                  {hasGroups && <span className="text-[9px] text-muted-foreground shrink-0">{isExpanded ? "▼" : "▶"}</span>}
+                  <Link href={`/projects/${p.id}`} className="truncate hover:underline">
+                    {p.name.length > truncLen ? p.name.slice(0, truncLen) + "…" : p.name}
+                  </Link>
+                </div>
+                {isExpanded && projGroups.map((g) => (
+                  <div key={g.id} className="border-b px-2 pl-4 flex items-center text-[10px] text-muted-foreground truncate" style={{ height: SUB_ROW_H }}>
+                    {g.name.length > (truncLen - 2) ? g.name.slice(0, truncLen - 2) + "…" : g.name}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
         </div>
 
         {/* Scrollable timeline */}
@@ -253,16 +377,39 @@ function GanttView({
               const end = min([parseISO(p.estimated_completion_date), yearEnd]);
               const x = differenceInDays(start, yearStart) * dayW;
               const w = Math.max(2, (differenceInDays(end, start) + 1) * dayW);
-              const y = HEADER_H + i * ROW_H + 8;
+              const rowY = rowOffsets[i];
+              const y = rowY + 8;
               const phase = p.current_phase_id ? phaseMap.get(p.current_phase_id) : null;
               const color = phase?.color || "#94a3b8";
+              const projGroups = groupsByProject.get(p.id) || [];
+              const isExpanded = showRoomGroups && expanded.has(p.id);
+
               return (
                 <g key={p.id}>
-                  <line x1={0} y1={HEADER_H + i * ROW_H} x2={TIMELINE_W} y2={HEADER_H + i * ROW_H} stroke="hsl(var(--border))" strokeWidth={0.5} />
+                  <line x1={0} y1={rowY} x2={TIMELINE_W} y2={rowY} stroke="hsl(var(--border))" strokeWidth={0.5} />
                   <a href={`/projects/${p.id}`}>
                     <rect x={x} y={y} width={w} height={20} rx={4} fill={color} fillOpacity={0.85} className="hover:fill-opacity-100 cursor-pointer" />
                     <line x1={x + w} y1={y - 2} x2={x + w} y2={y + 22} stroke={color} strokeWidth={2} />
                   </a>
+                  {isExpanded && projGroups.map((g, gi) => {
+                    const subY = rowY + ROW_H + gi * SUB_ROW_H;
+                    const groupPlans = plansByGroup.get(g.id) || [];
+                    if (groupPlans.length === 0) return <g key={g.id} />;
+                    const groupStart = groupPlans.reduce((minVal, pp) => pp.start_date < minVal ? pp.start_date : minVal, groupPlans[0].start_date);
+                    const groupEnd = groupPlans.reduce((maxVal, pp) => pp.end_date > maxVal ? pp.end_date : maxVal, groupPlans[0].end_date);
+                    const gStart = max([parseISO(groupStart), yearStart]);
+                    const gEnd = min([parseISO(groupEnd), yearEnd]);
+                    const gx = differenceInDays(gStart, yearStart) * dayW;
+                    const gw = Math.max(2, (differenceInDays(gEnd, gStart) + 1) * dayW);
+                    const firstPlan = [...groupPlans].sort((a, b) => a.start_date.localeCompare(b.start_date))[0];
+                    const gColor = firstPlan ? (phaseMap.get(firstPlan.phase_id)?.color || "#94a3b8") : "#94a3b8";
+                    return (
+                      <g key={g.id}>
+                        <line x1={0} y1={subY} x2={TIMELINE_W} y2={subY} stroke="hsl(var(--border))" strokeWidth={0.3} strokeDasharray="2 2" />
+                        <rect x={gx} y={subY + 4} width={gw} height={16} rx={3} fill={gColor} fillOpacity={0.6} />
+                      </g>
+                    );
+                  })}
                 </g>
               );
             })}

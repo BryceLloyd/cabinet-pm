@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { YearPlanView } from "@/components/plan/year-plan-view";
+import type { PhasePlan } from "@/lib/types";
 
 export default async function PlanPage({
   searchParams,
@@ -14,7 +15,9 @@ export default async function PlanPage({
   const yearStart = `${year}-01-01`;
   const yearEnd = `${year}-12-31`;
 
-  const [{ data: projects }, { data: phases }] = await Promise.all([
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const [{ data: projects }, { data: phases }, { data: roomGroups }, { data: phasePlans }, { data: userPrefs }] = await Promise.all([
     supabase
       .from("projects")
       .select("*")
@@ -23,6 +26,9 @@ export default async function PlanPage({
       .gte("estimated_completion_date", yearStart)
       .order("estimated_completion_date"),
     supabase.from("phases").select("*").is("archived_at", null).order("sort_order"),
+    supabase.from("room_groups").select("*").order("sort_order"),
+    supabase.from("phase_plans").select("id, room_group_id, project_id, phase_id, start_date, end_date"),
+    supabase.from("profiles").select("show_room_groups").eq("id", user!.id).single(),
   ]);
 
   return (
@@ -31,6 +37,9 @@ export default async function PlanPage({
       initialView={view}
       projects={projects || []}
       phases={phases || []}
+      roomGroups={roomGroups || []}
+      phasePlans={(phasePlans || []) as PhasePlan[]}
+      showRoomGroups={userPrefs?.show_room_groups ?? true}
     />
   );
 }
