@@ -6,7 +6,7 @@ export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [{ data: myTasks }, { data: activeProjects }, { data: phases }, { data: businessInfo }] = await Promise.all([
+  const [{ data: myTasks }, { data: activeProjects }, { data: phases }] = await Promise.all([
     supabase
       .from("tasks")
       .select("id, title, due_date, project_id, room_id, priority, projects(name), rooms(name)")
@@ -21,25 +21,12 @@ export default async function DashboardPage() {
       .order("estimated_completion_date", { ascending: true })
       .limit(10),
     supabase.from("phases").select("id, name, color").order("sort_order"),
-    supabase.from("business_info").select("name, logo_url").eq("id", 1).single(),
   ]);
 
   const phaseMap = new Map((phases || []).map((p) => [p.id, p]));
 
   return (
     <div className="container py-6 md:py-8 px-4">
-      <div className="mb-6">
-        {businessInfo?.name && (
-          <div className="flex items-center gap-2 mb-1">
-            {businessInfo.logo_url && (
-              <img src={businessInfo.logo_url} alt="" className="h-6 w-6 object-contain rounded" />
-            )}
-            <span className="text-sm text-muted-foreground">{businessInfo.name}</span>
-          </div>
-        )}
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-      </div>
-
       <div className="grid lg:grid-cols-2 gap-6">
         <section className="rounded-lg border bg-card">
           <div className="px-5 py-3.5 border-b flex items-center justify-between">

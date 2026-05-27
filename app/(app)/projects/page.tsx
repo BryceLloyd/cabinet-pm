@@ -16,12 +16,8 @@ export default async function ProjectsPage() {
 
   return (
     <div className="container py-6 md:py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Projects</h1>
-        <Link
-          href="/projects/new"
-          className="h-9 px-4 inline-flex items-center rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90"
-        >New project</Link>
+      <div className="flex justify-end mb-6">
+        <Link href="/projects/new" className="h-9 px-4 inline-flex items-center rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">New project</Link>
       </div>
 
       {/* Desktop table */}

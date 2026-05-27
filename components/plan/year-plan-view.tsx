@@ -35,7 +35,6 @@ export function YearPlanView({ year, initialView, projects, phases }: Props) {
       <div className="sticky top-0 z-10 bg-background pb-4 -mt-2 pt-2">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Year plan</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
               {projects.length} projects · scheduled backwards from completion date
             </p>

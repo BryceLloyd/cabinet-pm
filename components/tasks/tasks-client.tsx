@@ -113,12 +113,8 @@ export function TasksClient({
 
   return (
     <div className="container py-6 md:py-8 px-4">
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Tasks</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90"
-        >
+      <div className="flex justify-end mb-4">
+        <button onClick={() => setShowForm(!showForm)} className="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90">
           {showForm ? "Cancel" : "+ Add task"}
         </button>
       </div>
