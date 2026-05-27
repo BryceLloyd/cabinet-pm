@@ -18,12 +18,13 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { Room, RoomGroup } from "@/lib/types";
+import type { Phase, Room, RoomGroup } from "@/lib/types";
 
 interface Props {
   projectId: string;
   groups: RoomGroup[];
   rooms: Room[];
+  phases: Phase[];
   onGroupsChange: (groups: RoomGroup[]) => void;
   onRoomsChange: (rooms: Room[]) => void;
 }
@@ -38,8 +39,10 @@ function SortableGroupRow({
   group,
   groupRooms,
   allRooms,
+  phases,
   onDelete,
   onToggleRoom,
+  onPhaseChange,
   isEditing,
   onStartEdit,
   onStopEdit,
@@ -47,8 +50,10 @@ function SortableGroupRow({
   group: RoomGroup;
   groupRooms: Room[];
   allRooms: Room[];
+  phases: Phase[];
   onDelete: (id: string) => void;
   onToggleRoom: (roomId: string, groupId: string | null) => void;
+  onPhaseChange: (groupId: string, phaseId: string) => void;
   isEditing: boolean;
   onStartEdit: () => void;
   onStopEdit: () => void;
@@ -93,6 +98,24 @@ function SortableGroupRow({
             </div>
           )}
         </div>
+        {(() => {
+          // Derive group phase from its rooms (all should match)
+          const currentPhaseId = groupRooms.length > 0 ? groupRooms[0].current_phase_id : null;
+          const currentPhase = currentPhaseId ? phases.find((p) => p.id === currentPhaseId) : null;
+          return (
+            <select
+              value={currentPhaseId || ""}
+              onChange={(e) => onPhaseChange(group.id, e.target.value)}
+              className="h-7 px-2 text-xs rounded-md border bg-background shrink-0"
+              style={currentPhase ? { color: currentPhase.color, borderColor: `${currentPhase.color}50` } : {}}
+            >
+              <option value="">— no phase —</option>
+              {phases.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          );
+        })()}
         <button
           onClick={isEditing ? onStopEdit : onStartEdit}
           className="h-6 w-6 rounded grid place-items-center text-muted-foreground hover:text-foreground hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity"
@@ -144,7 +167,7 @@ function SortableGroupRow({
   );
 }
 
-export function RoomGroupManager({ projectId, groups, rooms, onGroupsChange, onRoomsChange }: Props) {
+export function RoomGroupManager({ projectId, groups, rooms, phases, onGroupsChange, onRoomsChange }: Props) {
   const supabase = createClient();
   const [creating, setCreating] = useState(false);
   const [selectedRoomIds, setSelectedRoomIds] = useState<Set<string>>(new Set());
@@ -241,6 +264,23 @@ export function RoomGroupManager({ projectId, groups, rooms, onGroupsChange, onR
     onRoomsChange(updatedRooms);
   }
 
+  async function changeGroupPhase(groupId: string, phaseId: string) {
+    const groupRoomIds = rooms.filter((r) => r.room_group_id === groupId).map((r) => r.id);
+    if (groupRoomIds.length === 0) return;
+
+    // Update all rooms in the group to the new phase
+    await Promise.all(
+      groupRoomIds.map((roomId) =>
+        supabase.from("rooms").update({ current_phase_id: phaseId || null }).eq("id", roomId)
+      )
+    );
+
+    const updatedRooms = rooms.map((r) =>
+      r.room_group_id === groupId ? { ...r, current_phase_id: phaseId || null } : r
+    );
+    onRoomsChange(updatedRooms);
+  }
+
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -278,8 +318,10 @@ export function RoomGroupManager({ projectId, groups, rooms, onGroupsChange, onR
                     group={g}
                     groupRooms={groupRooms}
                     allRooms={rooms}
+                    phases={phases}
                     onDelete={deleteGroup}
                     onToggleRoom={toggleRoomInGroup}
+                    onPhaseChange={changeGroupPhase}
                     isEditing={editingGroupId === g.id}
                     onStartEdit={() => setEditingGroupId(g.id)}
                     onStopEdit={() => setEditingGroupId(null)}

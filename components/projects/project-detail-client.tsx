@@ -329,6 +329,7 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
         projectId={project.id}
         groups={roomGroups}
         rooms={rooms}
+        phases={phases}
         onGroupsChange={setRoomGroups}
         onRoomsChange={setRooms}
       />
