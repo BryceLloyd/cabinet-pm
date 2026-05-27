@@ -22,7 +22,7 @@ export default async function PlanPage({
       .lte("start_date", yearEnd)
       .gte("estimated_completion_date", yearStart)
       .order("estimated_completion_date"),
-    supabase.from("phases").select("*").order("sort_order"),
+    supabase.from("phases").select("*").is("archived_at", null).order("sort_order"),
   ]);
 
   return (

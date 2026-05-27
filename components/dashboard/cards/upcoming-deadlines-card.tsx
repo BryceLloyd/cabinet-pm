@@ -39,7 +39,7 @@ export default function UpcomingDeadlinesCard({ userId }: CardProps) {
         .gte("estimated_completion_date", today)
         .lte("estimated_completion_date", in14)
         .order("estimated_completion_date"),
-      supabase.from("phases").select("id, name, color"),
+      supabase.from("phases").select("id, name, color").is("archived_at", null),
     ]).then(([{ data: p }, { data: ph }]) => {
       setProjects((p as ProjectRow[]) || []);
       setPhases((ph as Phase[]) || []);

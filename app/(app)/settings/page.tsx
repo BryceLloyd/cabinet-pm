@@ -9,7 +9,7 @@ export default async function SettingsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   const [{ data: profiles }, { data: phases }, { data: profile }, { data: businessInfo }] = await Promise.all([
     supabase.from("profiles").select("*").order("created_at"),
-    supabase.from("phases").select("*").order("sort_order"),
+    supabase.from("phases").select("*").is("archived_at", null).order("sort_order"),
     supabase.from("profiles").select("role").eq("id", user!.id).single(),
     supabase.from("business_info").select("*").eq("id", 1).single(),
   ]);

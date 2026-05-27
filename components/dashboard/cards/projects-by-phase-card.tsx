@@ -22,7 +22,7 @@ export default function ProjectsByPhaseCard({ userId }: CardProps) {
         .from("projects")
         .select("current_phase_id")
         .in("status", ["planning", "active"]),
-      supabase.from("phases").select("id, name, color, sort_order").order("sort_order"),
+      supabase.from("phases").select("id, name, color, sort_order").is("archived_at", null).order("sort_order"),
     ]).then(([{ data: projects }, { data: phases }]) => {
       const counts = new Map<string, number>();
       (projects || []).forEach((p) => {

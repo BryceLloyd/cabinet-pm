@@ -9,7 +9,7 @@ export default async function ProjectsPage() {
       .from("projects")
       .select("id, name, client_name, estimated_completion_date, start_date, current_phase_id, status, lead_time_weeks")
       .order("estimated_completion_date"),
-    supabase.from("phases").select("id, name, color").order("sort_order"),
+    supabase.from("phases").select("id, name, color").is("archived_at", null).order("sort_order"),
   ]);
 
   const phaseMap = new Map((phases || []).map((p) => [p.id, p]));

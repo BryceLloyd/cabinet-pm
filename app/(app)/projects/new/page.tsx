@@ -29,7 +29,7 @@ export default function NewProjectPage() {
 
     // Get the default starting phase.
     const { data: phase } = await supabase
-      .from("phases").select("id").eq("is_default", true).maybeSingle();
+      .from("phases").select("id").eq("is_default", true).is("archived_at", null).maybeSingle();
 
     const { data, error } = await supabase
       .from("projects")
