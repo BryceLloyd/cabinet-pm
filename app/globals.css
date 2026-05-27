@@ -44,6 +44,21 @@
   body { @apply bg-background text-foreground antialiased; font-feature-settings: "cv02", "cv03", "cv04", "cv11"; }
 }
 
+@layer base {
+  :root {
+    --density-card-padding: 1.5rem;
+    --density-row-padding: 0.75rem;
+    --density-gap: 1.5rem;
+    --density-section-gap: 2rem;
+  }
+  .density-compact {
+    --density-card-padding: 1rem;
+    --density-row-padding: 0.375rem;
+    --density-gap: 0.75rem;
+    --density-section-gap: 1rem;
+  }
+}
+
 @layer utilities {
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
