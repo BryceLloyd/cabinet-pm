@@ -56,7 +56,8 @@ export function MobileFab() {
 
   function handleClick() {
     if (config!.action === "navigate" && config!.href) {
-      router.push(config!.href);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      router.push(config!.href as any);
     } else {
       setDrawerOpen(true);
     }
