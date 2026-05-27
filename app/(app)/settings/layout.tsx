@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, Building2, Users, Layers, ChevronLeft } from "lucide-react";
+import { User, Building2, Users, Layers, CalendarDays, ChevronLeft } from "lucide-react";
 
 const SETTINGS_NAV = [
   { href: "/settings/profile", label: "Profile", icon: User },
   { href: "/settings/business", label: "Business", icon: Building2 },
   { href: "/settings/team", label: "Team", icon: Users },
   { href: "/settings/phases", label: "Phases", icon: Layers },
+  { href: "/settings/event-types", label: "Event types", icon: CalendarDays },
 ] as const;
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
