@@ -32,7 +32,7 @@ export function YearPlanView({ year, initialView, projects, phases }: Props) {
 
   return (
     <div className="container py-6 md:py-8 px-4">
-      <div className="sticky top-0 z-10 bg-background pb-4 -mt-2 pt-2">
+      <div className="sticky top-14 z-10 bg-background pb-4 -mt-6 pt-6 -mx-4 px-4 shadow-[0_1px_0_0_hsl(var(--border))]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <p className="text-sm text-muted-foreground mt-0.5">
