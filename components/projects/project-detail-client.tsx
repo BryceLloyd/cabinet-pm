@@ -54,12 +54,7 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
   const phaseMap = new Map(phases.map((p) => [p.id, p]));
   const profileMap = new Map(profiles.map((p) => [p.id, p]));
 
-  const roomCountMap: Record<string, number> = {};
-  rooms.forEach((r) => {
-    if (r.room_group_id) {
-      roomCountMap[r.room_group_id] = (roomCountMap[r.room_group_id] || 0) + 1;
-    }
-  });
+  // no roomCountMap needed — RoomGroupManager now manages rooms directly
 
   async function addRoom() {
     if (!newRoomName.trim()) return;
@@ -82,26 +77,6 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
     if (data) {
       setRooms([...rooms, data as Room]);
       setNewRoomName("");
-    }
-  }
-
-  async function changeRoomPhase(roomId: string, phaseId: string) {
-    const { error } = await supabase
-      .from("rooms")
-      .update({ current_phase_id: phaseId })
-      .eq("id", roomId);
-    if (!error) {
-      setRooms(rooms.map((r) => (r.id === roomId ? { ...r, current_phase_id: phaseId } : r)));
-    }
-  }
-
-  async function changeRoomGroup(roomId: string, groupId: string | null) {
-    const { error } = await supabase
-      .from("rooms")
-      .update({ room_group_id: groupId })
-      .eq("id", roomId);
-    if (!error) {
-      setRooms(rooms.map((r) => (r.id === roomId ? { ...r, room_group_id: groupId } : r)));
     }
   }
 
@@ -350,13 +325,13 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
       )}
 
       {/* Room Groups */}
-      <section className="lg:col-span-5">
-        <RoomGroupManager
-          projectId={project.id}
-          initialGroups={roomGroups}
-          roomCountMap={roomCountMap}
-        />
-      </section>
+      <RoomGroupManager
+        projectId={project.id}
+        groups={roomGroups}
+        rooms={rooms}
+        onGroupsChange={setRoomGroups}
+        onRoomsChange={setRooms}
+      />
 
       {/* Planning */}
       <PlanningSection
@@ -380,7 +355,6 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
             </li>
           )}
           {rooms.map((room) => {
-            const phase = room.current_phase_id ? phaseMap.get(room.current_phase_id) : null;
             const roomTaskCount = tasks.filter((t) => t.room_id === room.id && !t.completed_at).length;
             const isEditing = editingRoom === room.id;
 
@@ -431,27 +405,10 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
                   {room.notes && <div className="text-xs text-muted-foreground mt-0.5">{room.notes}</div>}
                 </div>
                 <div className="flex items-center gap-2">
-                  <select
-                    value={room.room_group_id || ""}
-                    onChange={(e) => changeRoomGroup(room.id, e.target.value || null)}
-                    className="h-7 px-2 text-xs rounded-md border bg-background"
-                  >
-                    <option value="">No group</option>
-                    {roomGroups.map((g) => (
-                      <option key={g.id} value={g.id}>{g.name}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={room.current_phase_id || ""}
-                    onChange={(e) => changeRoomPhase(room.id, e.target.value)}
-                    className="h-7 px-2 text-xs rounded-md border bg-background"
-                    style={phase ? { color: phase.color, borderColor: `${phase.color}50` } : {}}
-                  >
-                    <option value="">— no phase —</option>
-                    {phases.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
+                  {room.room_group_id && (() => {
+                    const group = roomGroups.find((g) => g.id === room.room_group_id);
+                    return group ? <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{group.name}</span> : null;
+                  })()}
                   <button
                     onClick={() => startEditingRoom(room)}
                     className="h-7 w-7 rounded-md border grid place-items-center text-muted-foreground hover:text-foreground hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity"
