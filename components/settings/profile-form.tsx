@@ -2,7 +2,6 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
 import { createClient } from "@/lib/supabase/client";
 import { SetPassword } from "@/components/settings/set-password";
 
@@ -11,7 +10,6 @@ interface ProfileFormProps {
   email: string;
   fullName: string;
   avatarUrl: string | null;
-  themePref: "light" | "dark" | "system";
   densityPref: "compact" | "comfortable";
   showRoomGroupsPref: boolean;
 }
@@ -21,12 +19,10 @@ export function ProfileForm({
   email,
   fullName: initialName,
   avatarUrl: initialAvatar,
-  themePref,
   densityPref: initialDensity,
   showRoomGroupsPref: initialShowRoomGroups,
 }: ProfileFormProps) {
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
   const supabase = createClient();
   const avatarRef = useRef<HTMLInputElement>(null);
 
@@ -37,13 +33,6 @@ export function ProfileForm({
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
-
-  // Sync next-themes with DB preference on mount
-  useState(() => {
-    if (themePref && theme !== themePref) {
-      setTheme(themePref);
-    }
-  });
 
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -84,11 +73,6 @@ export function ProfileForm({
       router.refresh();
     }
     setSaving(false);
-  }
-
-  function handleThemeChange(newTheme: "light" | "dark" | "system") {
-    setTheme(newTheme);
-    supabase.from("profiles").update({ theme_preference: newTheme }).eq("id", userId);
   }
 
   function handleDensityChange(newDensity: "compact" | "comfortable") {
@@ -170,7 +154,7 @@ export function ProfileForm({
               >
                 {saving ? "Saving..." : "Save"}
               </button>
-              {status === "saved" && <span className="text-sm text-emerald-600 dark:text-emerald-400">Saved.</span>}
+              {status === "saved" && <span className="text-sm text-emerald-600">Saved.</span>}
               {status === "error" && error && <span className="text-sm text-destructive">{error}</span>}
             </div>
           </form>
@@ -183,27 +167,6 @@ export function ProfileForm({
           <h2 className="font-medium">Appearance</h2>
         </div>
         <div className="px-5 py-4 space-y-4">
-          {/* Theme */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Theme</label>
-            <div className="inline-flex items-center rounded-md border p-0.5">
-              {(["light", "dark", "system"] as const).map((opt) => (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => handleThemeChange(opt)}
-                  className={`h-8 px-3 text-xs rounded font-medium transition-colors capitalize ${
-                    (theme || "system") === opt
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted"
-                  }`}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Density */}
           <div>
             <label className="block text-sm font-medium mb-2">Density</label>

@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { createClient } from "@/lib/supabase/client";
-import { useTheme } from "next-themes";
 
 function getInitials(fullName: string | null, email: string): string {
   if (fullName) {
@@ -42,25 +41,6 @@ export function UserMenu({
   const router = useRouter();
   const initials = getInitials(fullName, email);
   const bg = avatarColor(email);
-  const { theme, setTheme } = useTheme();
-
-  function cycleTheme() {
-    const next = theme === "system" ? "light" : theme === "light" ? "dark" : "system";
-    setTheme(next);
-    // Persist to DB (fire-and-forget)
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        supabase.from("profiles").update({ theme_preference: next }).eq("id", user.id);
-      }
-    });
-  }
-
-  function themeLabel() {
-    if (theme === "light") return "Light";
-    if (theme === "dark") return "Dark";
-    return "System";
-  }
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -112,32 +92,6 @@ export function UserMenu({
               </svg>
               Settings
             </Link>
-          </DropdownMenu.Item>
-
-          <DropdownMenu.Item
-            onSelect={cycleTheme}
-            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm cursor-pointer outline-none hover:bg-muted focus:bg-muted"
-          >
-            {theme === "dark" ? (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-              </svg>
-            ) : theme === "light" ? (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="4" />
-                <path d="M12 2v2" /><path d="M12 20v2" />
-                <path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" />
-                <path d="M2 12h2" /><path d="M20 12h2" />
-                <path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" />
-              </svg>
-            ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect width="20" height="14" x="2" y="3" rx="2" />
-                <line x1="8" x2="16" y1="21" y2="21" />
-                <line x1="12" x2="12" y1="17" y2="21" />
-              </svg>
-            )}
-            Theme: {themeLabel()}
           </DropdownMenu.Item>
 
           <DropdownMenu.Separator className="h-px bg-border my-1" />

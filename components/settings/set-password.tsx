@@ -63,7 +63,7 @@ export function SetPassword() {
         disabled={loading}
         className="h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50"
       >{loading ? "Saving…" : "Set password"}</button>
-      {status === "success" && <p className="text-sm text-emerald-600 dark:text-emerald-400">Password updated.</p>}
+      {status === "success" && <p className="text-sm text-emerald-600">Password updated.</p>}
       {status === "error" && error && <p className="text-sm text-destructive">{error}</p>}
     </form>
   );

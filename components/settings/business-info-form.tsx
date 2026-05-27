@@ -195,7 +195,7 @@ export function BusinessInfoForm({
         >
           {saving ? "Saving..." : "Save"}
         </button>
-        {status === "saved" && <span className="text-sm text-emerald-600 dark:text-emerald-400">Saved.</span>}
+        {status === "saved" && <span className="text-sm text-emerald-600">Saved.</span>}
         {status === "error" && error && <span className="text-sm text-destructive">{error}</span>}
       </div>
     </form>
