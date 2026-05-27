@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Project, Room, Task, Phase, Profile, ProjectStatus, RoomGroup } from "@/lib/types";
 import { RoomGroupManager } from "@/components/projects/room-group-manager";
+import { PlanningSection } from "@/components/projects/planning-section";
 import { format, addWeeks } from "date-fns";
 
 interface Props {
@@ -354,6 +355,15 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
           roomCountMap={roomCountMap}
         />
       </section>
+
+      {/* Planning */}
+      <PlanningSection
+        projectId={project.id}
+        projectStart={project.start_date}
+        projectEnd={project.estimated_completion_date}
+        phases={phases}
+        groups={roomGroups}
+      />
 
     <div className="grid lg:grid-cols-5 gap-6">
       {/* Rooms */}
