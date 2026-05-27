@@ -11,6 +11,7 @@ export interface Profile {
   theme_preference: "light" | "dark" | "system";
   density_preference: "compact" | "comfortable";
   notification_preferences: Record<string, unknown>;
+  show_room_groups: boolean;
   created_at: string;
 }
 
@@ -46,6 +47,7 @@ export interface Room {
   name: string;
   notes: string | null;
   sort_order: number;
+  room_group_id: string | null;
   current_phase_id: string | null;
   estimated_start: string | null;
   estimated_end: string | null;
@@ -60,6 +62,7 @@ export interface Task {
   due_date: string | null;
   project_id: string | null;
   room_id: string | null;
+  room_group_id: string | null;
   assigned_to: string | null;
   completed_by: string | null;
   completed_at: string | null;
@@ -88,4 +91,24 @@ export interface RoomPhaseHistory {
   entered_by: string | null;
   exited_at: string | null;
   notes: string | null;
+}
+
+export interface RoomGroup {
+  id: string;
+  project_id: string;
+  name: string;
+  sort_order: number;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface PhasePlan {
+  id: string;
+  room_group_id: string | null;
+  project_id: string | null;
+  phase_id: string;
+  start_date: string;
+  end_date: string;
+  created_at: string;
+  updated_at: string;
 }
