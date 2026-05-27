@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { User, Building2, Users, Layers, ChevronRight } from "lucide-react";
+import { User, Building2, Users, Layers, CalendarDays, ChevronRight } from "lucide-react";
 import { SettingsDesktopRedirect } from "./desktop-redirect";
 
 const SETTINGS_SECTIONS = [
@@ -7,6 +7,7 @@ const SETTINGS_SECTIONS = [
   { href: "/settings/business", label: "Business", description: "Company info and branding", icon: Building2 },
   { href: "/settings/team", label: "Team", description: "Members and permissions", icon: Users },
   { href: "/settings/phases", label: "Phases", description: "Project phase pipeline", icon: Layers },
+  { href: "/settings/event-types", label: "Event types", description: "Calendar event categories", icon: CalendarDays },
 ] as const;
 
 export default function SettingsIndexPage() {
