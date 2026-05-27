@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { UserMenu } from "@/components/user-menu";
 import { BottomTabBar } from "@/components/bottom-tab-bar";
+import { PageTitle } from "@/components/page-title";
 
 const NAV = [
   { href: "/dashboard" as const, label: "Dashboard" },
@@ -46,13 +47,17 @@ export default async function AppShell({ children }: { children: React.ReactNode
     <div className="min-h-screen flex flex-col">
       <header className="border-b bg-background">
         <div className="container flex h-14 items-center justify-between px-4">
-          <div className="flex items-center gap-4 md:gap-8">
-            <Link href="/dashboard" className="flex items-center gap-2 font-semibold tracking-tight">
+          <div className="flex items-center gap-2 md:gap-3 min-w-0">
+            <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
               {bizLogo && (
                 <img src={bizLogo} alt="" className="h-7 w-7 object-contain rounded" />
               )}
-              <span className="hidden md:inline">{bizName}</span>
+              <span className="hidden md:inline text-sm font-semibold tracking-tight">{bizName}</span>
             </Link>
+            <span className="hidden md:inline text-muted-foreground/40 text-sm">/</span>
+            <PageTitle />
+          </div>
+          <div className="flex items-center gap-1 md:gap-4">
             <nav className="hidden md:flex items-center gap-1">
               {NAV.map((item) => (
                 <Link
@@ -64,16 +69,16 @@ export default async function AppShell({ children }: { children: React.ReactNode
                 </Link>
               ))}
             </nav>
+            <UserMenu
+              fullName={profile.full_name}
+              email={user.email || ""}
+              role={profile.role}
+              avatarUrl={profile.avatar_url || null}
+            />
           </div>
-          <UserMenu
-            fullName={profile.full_name}
-            email={user.email || ""}
-            role={profile.role}
-            avatarUrl={profile.avatar_url || null}
-          />
         </div>
       </header>
-      <main className="flex-1 pb-16 md:pb-0">{children}</main>
+      <main className="flex-1 pb-20 md:pb-0">{children}</main>
       <BottomTabBar />
     </div>
   );
