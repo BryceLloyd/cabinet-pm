@@ -21,6 +21,10 @@ export async function createClient() {
           }
         },
       },
+      global: {
+        fetch: (url: string | URL | Request, init?: RequestInit) =>
+          fetch(url, { ...init, cache: "no-store" }),
+      },
     }
   );
 }

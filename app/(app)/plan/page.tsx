@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { YearPlanView } from "@/components/plan/year-plan-view";
 import type { PhasePlan, CalendarEvent, EventType } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+
 export default async function PlanPage({
   searchParams,
 }: {

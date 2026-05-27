@@ -32,6 +32,11 @@ export function YearPlanView({ year, initialView, projects, phases, roomGroups, 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [events, setEvents] = useState(calendarEvents);
 
+  // Sync events state when server props change (e.g. after navigation)
+  useEffect(() => {
+    setEvents(calendarEvents);
+  }, [calendarEvents]);
+
   const phaseMap = useMemo(() => new Map(phases.map((p) => [p.id, p])), [phases]);
   const eventTypeMap = useMemo(() => new Map(eventTypes.map((t) => [t.id, t])), [eventTypes]);
   const currentYear = new Date().getFullYear();
