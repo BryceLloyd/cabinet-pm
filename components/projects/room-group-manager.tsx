@@ -171,6 +171,8 @@ export function RoomGroupManager({ projectId, groups, rooms, phases, onGroupsCha
   const supabase = createClient();
   const [creating, setCreating] = useState(false);
   const [selectedRoomIds, setSelectedRoomIds] = useState<Set<string>>(new Set());
+  const [newRoomNames, setNewRoomNames] = useState<string[]>([]);
+  const [newRoomInput, setNewRoomInput] = useState("");
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
 
   const sensors = useSensors(
@@ -190,11 +192,30 @@ export function RoomGroupManager({ projectId, groups, rooms, phases, onGroupsCha
     });
   }
 
-  async function createGroup() {
-    if (selectedRoomIds.size === 0) return;
-    const selectedRooms = rooms.filter((r) => selectedRoomIds.has(r.id));
-    const name = groupNameFromRooms(selectedRooms.map((r) => r.name));
+  function addNewRoomName() {
+    const trimmed = newRoomInput.trim();
+    if (!trimmed) return;
+    if (newRoomNames.includes(trimmed)) return;
+    setNewRoomNames([...newRoomNames, trimmed]);
+    setNewRoomInput("");
+  }
 
+  function removeNewRoomName(name: string) {
+    setNewRoomNames(newRoomNames.filter((n) => n !== name));
+  }
+
+  async function createGroup() {
+    const existingSelected = rooms.filter((r) => selectedRoomIds.has(r.id));
+    if (selectedRoomIds.size === 0 && newRoomNames.length === 0) return;
+
+    // Compute group name from selected existing + new rooms
+    const allNames = [
+      ...existingSelected.map((r) => r.name),
+      ...newRoomNames,
+    ];
+    const name = groupNameFromRooms(allNames);
+
+    // Create the group
     const { data, error } = await supabase
       .from("room_groups")
       .insert({ project_id: projectId, name, sort_order: groups.length })
@@ -203,21 +224,47 @@ export function RoomGroupManager({ projectId, groups, rooms, phases, onGroupsCha
     if (error || !data) return;
 
     const newGroup = data as RoomGroup;
+    const defaultPhase = phases.find((p) => p.is_default);
 
-    // Assign rooms to the new group
-    await Promise.all(
-      Array.from(selectedRoomIds).map((roomId) =>
-        supabase.from("rooms").update({ room_group_id: newGroup.id }).eq("id", roomId)
-      )
-    );
+    // Create new rooms and assign to group
+    let createdRooms: Room[] = [];
+    if (newRoomNames.length > 0) {
+      const { data: roomData } = await supabase
+        .from("rooms")
+        .insert(
+          newRoomNames.map((rn, i) => ({
+            project_id: projectId,
+            name: rn,
+            sort_order: rooms.length + i,
+            room_group_id: newGroup.id,
+            current_phase_id: defaultPhase?.id || null,
+          }))
+        )
+        .select("*");
+      if (roomData) createdRooms = roomData as Room[];
+    }
 
-    const updatedRooms = rooms.map((r) =>
-      selectedRoomIds.has(r.id) ? { ...r, room_group_id: newGroup.id } : r
-    );
+    // Assign existing rooms to the group
+    if (selectedRoomIds.size > 0) {
+      await Promise.all(
+        Array.from(selectedRoomIds).map((roomId) =>
+          supabase.from("rooms").update({ room_group_id: newGroup.id }).eq("id", roomId)
+        )
+      );
+    }
+
+    const updatedRooms = [
+      ...rooms.map((r) =>
+        selectedRoomIds.has(r.id) ? { ...r, room_group_id: newGroup.id } : r
+      ),
+      ...createdRooms,
+    ];
 
     onGroupsChange([...groups, newGroup]);
     onRoomsChange(updatedRooms);
     setSelectedRoomIds(new Set());
+    setNewRoomNames([]);
+    setNewRoomInput("");
     setCreating(false);
   }
 
@@ -340,37 +387,82 @@ export function RoomGroupManager({ projectId, groups, rooms, phases, onGroupsCha
       {/* Create new group */}
       {creating ? (
         <div className="px-4 py-3 border-t space-y-2">
-          <p className="text-sm font-medium">Select rooms for the new group:</p>
-          {unassignedRooms.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic">All rooms are already assigned to groups.</p>
-          ) : (
-            unassignedRooms.map((r) => (
-              <label key={r.id} className="flex items-center gap-2 text-sm cursor-pointer py-0.5">
-                <input
-                  type="checkbox"
-                  checked={selectedRoomIds.has(r.id)}
-                  onChange={() => toggleRoomSelection(r.id)}
-                  className="size-3.5 rounded border-input"
-                />
-                {r.name}
-              </label>
-            ))
+          <p className="text-sm font-medium">Rooms for the new group:</p>
+
+          {/* Existing unassigned rooms */}
+          {unassignedRooms.length > 0 && (
+            <div>
+              {unassignedRooms.map((r) => (
+                <label key={r.id} className="flex items-center gap-2 text-sm cursor-pointer py-0.5">
+                  <input
+                    type="checkbox"
+                    checked={selectedRoomIds.has(r.id)}
+                    onChange={() => toggleRoomSelection(r.id)}
+                    className="size-3.5 rounded border-input"
+                  />
+                  {r.name}
+                </label>
+              ))}
+            </div>
           )}
-          {selectedRoomIds.size > 0 && (
+
+          {/* New rooms to be created */}
+          {newRoomNames.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {newRoomNames.map((n) => (
+                <span key={n} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-muted">
+                  {n}
+                  <button
+                    onClick={() => removeNewRoomName(n)}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Add new room input */}
+          <div className="flex gap-2">
+            <input
+              value={newRoomInput}
+              onChange={(e) => setNewRoomInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addNewRoomName()}
+              placeholder="Add a room (e.g. Kitchen, Pantry)"
+              className="flex-1 h-8 px-3 text-sm rounded-md border bg-background"
+            />
+            <button
+              onClick={addNewRoomName}
+              disabled={!newRoomInput.trim()}
+              className="h-8 px-3 rounded-md border text-xs font-medium hover:bg-muted disabled:opacity-50"
+            >
+              + Room
+            </button>
+          </div>
+
+          {/* Preview group name */}
+          {(selectedRoomIds.size > 0 || newRoomNames.length > 0) && (
             <p className="text-xs text-muted-foreground">
-              Group name: <span className="font-medium text-foreground">{groupNameFromRooms(rooms.filter((r) => selectedRoomIds.has(r.id)).map((r) => r.name))}</span>
+              Group name: <span className="font-medium text-foreground">
+                {groupNameFromRooms([
+                  ...rooms.filter((r) => selectedRoomIds.has(r.id)).map((r) => r.name),
+                  ...newRoomNames,
+                ])}
+              </span>
             </p>
           )}
+
           <div className="flex gap-2 pt-1">
             <button
               onClick={createGroup}
-              disabled={selectedRoomIds.size === 0}
+              disabled={selectedRoomIds.size === 0 && newRoomNames.length === 0}
               className="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 disabled:opacity-50"
             >
               Create group
             </button>
             <button
-              onClick={() => { setCreating(false); setSelectedRoomIds(new Set()); }}
+              onClick={() => { setCreating(false); setSelectedRoomIds(new Set()); setNewRoomNames([]); setNewRoomInput(""); }}
               className="h-8 px-3 rounded-md border text-xs hover:bg-muted"
             >
               Cancel
@@ -381,14 +473,10 @@ export function RoomGroupManager({ projectId, groups, rooms, phases, onGroupsCha
         <div className="px-4 py-3 border-t">
           <button
             onClick={() => setCreating(true)}
-            disabled={unassignedRooms.length === 0 && rooms.length > 0}
-            className="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 disabled:opacity-50"
+            className="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90"
           >
             New group
           </button>
-          {unassignedRooms.length === 0 && rooms.length > 0 && (
-            <span className="text-xs text-muted-foreground ml-2">All rooms are assigned.</span>
-          )}
         </div>
       )}
     </section>
