@@ -14,8 +14,10 @@ interface SlidePanelProps {
 export function SlidePanel({ open, onClose, title, onDelete, children }: SlidePanelProps) {
   const [isMobile, setIsMobile] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef<number | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
+  const [mobileMaxHeight, setMobileMaxHeight] = useState("75vh");
 
   // Detect mobile
   useEffect(() => {
@@ -24,6 +26,41 @@ export function SlidePanel({ open, onClose, title, onDelete, children }: SlidePa
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
+
+  // Adjust height when mobile keyboard opens (visualViewport shrinks)
+  useEffect(() => {
+    if (!open || !isMobile) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    function onResize() {
+      if (!vv) return;
+      // Use almost all of the visual viewport so the form is fully visible above the keyboard
+      const h = vv.height;
+      setMobileMaxHeight(`${h - 16}px`);
+    }
+
+    // Set initial value
+    onResize();
+
+    vv.addEventListener("resize", onResize);
+    return () => vv.removeEventListener("resize", onResize);
+  }, [open, isMobile]);
+
+  // Scroll focused input into view inside the panel body when keyboard opens
+  useEffect(() => {
+    if (!open || !isMobile) return;
+    function onFocusIn(e: FocusEvent) {
+      const target = e.target as HTMLElement;
+      if (!bodyRef.current?.contains(target)) return;
+      // Small delay lets the keyboard finish animating
+      setTimeout(() => {
+        target.scrollIntoView({ block: "center", behavior: "smooth" });
+      }, 150);
+    }
+    document.addEventListener("focusin", onFocusIn);
+    return () => document.removeEventListener("focusin", onFocusIn);
+  }, [open, isMobile]);
 
   // Close on Escape
   useEffect(() => {
@@ -85,9 +122,9 @@ export function SlidePanel({ open, onClose, title, onDelete, children }: SlidePa
         /* Mobile: bottom sheet */
         <div
           ref={panelRef}
-          className="absolute bottom-0 left-0 right-0 bg-card rounded-t-2xl shadow-lg flex flex-col transition-transform duration-200 ease-out"
+          className="absolute bottom-0 left-0 right-0 bg-card rounded-t-2xl shadow-lg flex flex-col transition-[transform,max-height] duration-200 ease-out"
           style={{
-            maxHeight: "75vh",
+            maxHeight: mobileMaxHeight,
             transform: `translateY(${dragOffset}px)`,
           }}
         >
@@ -123,7 +160,7 @@ export function SlidePanel({ open, onClose, title, onDelete, children }: SlidePa
           </div>
 
           {/* Scrollable body */}
-          <div className="flex-1 overflow-y-auto px-4 py-4">
+          <div ref={bodyRef} className="flex-1 overflow-y-auto px-4 py-4">
             {children}
           </div>
         </div>
