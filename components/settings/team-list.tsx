@@ -22,12 +22,25 @@ export function TeamList({
 }) {
   const router = useRouter();
   const [updating, setUpdating] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
 
   async function handleRoleChange(memberId: string, newRole: "admin" | "member") {
     setUpdating(memberId);
     const supabase = createClient();
     await supabase.from("profiles").update({ role: newRole }).eq("id", memberId);
     setUpdating(null);
+    router.refresh();
+  }
+
+  async function handleRemove(memberId: string) {
+    setUpdating(memberId);
+    const supabase = createClient();
+    await supabase
+      .from("profiles")
+      .update({ deactivated_at: new Date().toISOString() })
+      .eq("id", memberId);
+    setUpdating(null);
+    setConfirmRemove(null);
     router.refresh();
   }
 
@@ -58,15 +71,42 @@ export function TeamList({
                 </div>
               </div>
               {isAdmin && !isSelf ? (
-                <select
-                  value={m.role}
-                  disabled={updating === m.id}
-                  onChange={(e) => handleRoleChange(m.id, e.target.value as "admin" | "member")}
-                  className="h-7 px-2 text-xs rounded-md border bg-background cursor-pointer disabled:opacity-50"
-                >
-                  <option value="admin">Admin</option>
-                  <option value="member">Member</option>
-                </select>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={m.role}
+                    disabled={updating === m.id}
+                    onChange={(e) => handleRoleChange(m.id, e.target.value as "admin" | "member")}
+                    className="h-7 px-2 text-xs rounded-md border bg-background cursor-pointer disabled:opacity-50"
+                  >
+                    <option value="admin">Admin</option>
+                    <option value="member">Member</option>
+                  </select>
+                  {confirmRemove === m.id ? (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleRemove(m.id)}
+                        disabled={updating === m.id}
+                        className="h-7 px-2 text-xs rounded-md bg-destructive text-destructive-foreground hover:opacity-90 disabled:opacity-50"
+                      >
+                        Confirm
+                      </button>
+                      <button
+                        onClick={() => setConfirmRemove(null)}
+                        className="h-7 px-2 text-xs rounded-md border hover:bg-muted"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmRemove(m.id)}
+                      disabled={updating === m.id}
+                      className="h-7 px-2 text-xs rounded-md border text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
               ) : (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-muted capitalize">{m.role}</span>
               )}

@@ -28,6 +28,7 @@ export function EventDetailPanel({
   const [projectId, setProjectId] = useState("");
   const [groupId, setGroupId] = useState("");
   const [notes, setNotes] = useState("");
+  const [creatorName, setCreatorName] = useState<string | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync local state when event changes
@@ -39,6 +40,9 @@ export function EventDetailPanel({
     setProjectId(event.project_id || "");
     setGroupId(event.room_group_id || "");
     setNotes(event.notes || "");
+    setCreatorName(null);
+    supabase.from("profiles").select("full_name").eq("id", event.created_by).single()
+      .then(({ data }) => { if (data) setCreatorName(data.full_name); });
   }, [event?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const availableGroups = projectId ? (groupsByProject.get(projectId) || []) : [];
@@ -207,7 +211,7 @@ export function EventDetailPanel({
 
       {/* Meta footer */}
       <div className="pt-3 border-t text-[11px] text-muted-foreground">
-        Created {format(new Date(event.created_at), "MMM d, yyyy")}
+        Created {format(new Date(event.created_at), "MMM d, yyyy")}{creatorName ? ` by ${creatorName}` : ""}
       </div>
     </SlidePanel>
   );

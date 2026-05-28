@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { format, addDays } from "date-fns";
 import type { CardProps } from "@/lib/dashboard/card-registry";
@@ -44,7 +43,7 @@ function normalizeEvents(data: EventRowRaw[]): EventRow[] {
   });
 }
 
-export default function UpcomingEventsCard({ userId }: CardProps) {
+export default function UpcomingEventsCard({ userId, onEventClick }: CardProps) {
   const [events, setEvents] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -75,8 +74,7 @@ export default function UpcomingEventsCard({ userId }: CardProps) {
         <li className="px-5 py-8 text-sm text-muted-foreground text-center">No events in the next 14 days.</li>
       )}
       {events.map((ev) => (
-        <li key={ev.id} className="px-5 py-3">
-          <Link href="/plan" className="block hover:opacity-70 transition-opacity">
+        <li key={ev.id} className="px-5 py-3 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onEventClick?.(ev.id)}>
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <span
@@ -100,7 +98,6 @@ export default function UpcomingEventsCard({ userId }: CardProps) {
                 </span>
               )}
             </div>
-          </Link>
         </li>
       ))}
     </ul>

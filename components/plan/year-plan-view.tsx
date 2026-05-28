@@ -309,17 +309,36 @@ function GanttView({
                     </text>
                   </g>
                 )}
-                <text x={hasGroups ? 16 : 12} y={rowY + 22} fontSize={12} className="fill-foreground" fontWeight={500}>
-                  {p.name.length > truncLen ? p.name.slice(0, truncLen) + "…" : p.name}
-                </text>
+                <a href={`/projects/${p.id}`} className="cursor-pointer">
+                  <text x={hasGroups ? 16 : 12} y={rowY + 22} fontSize={12} className="fill-foreground hover:fill-primary" fontWeight={500}>
+                    {p.name.length > truncLen ? p.name.slice(0, truncLen) + "…" : p.name}
+                  </text>
+                </a>
                 {p.client_name && LABEL_W > 160 && (
                   <text x={hasGroups ? 16 : 12} y={rowY + 22} fontSize={10} className="fill-muted-foreground" textAnchor="start" dx={Math.min(160, p.name.length * 6.5 + 8)}>
                     {p.client_name.length > 16 ? p.client_name.slice(0, 16) + "…" : p.client_name}
                   </text>
                 )}
                 <a href={`/projects/${p.id}`}>
-                  <rect x={x} y={y} width={w} height={20} rx={4} fill={color} fillOpacity={0.85} className="hover:fill-opacity-100 cursor-pointer" />
+                  <rect x={x} y={y} width={w} height={20} rx={4} fill="#94a3b8" fillOpacity={0.25} className="hover:fill-opacity-40 cursor-pointer" />
                   <line x1={x + w} y1={y - 2} x2={x + w} y2={y + 22} stroke={color} strokeWidth={2} />
+                  {/* Phase overlay */}
+                  {(() => {
+                    const projectPlans = (plansByGroup.get(p.id) || [])
+                      .filter((pp) => phaseMap.has(pp.phase_id))
+                      .sort((a, b) => (phaseMap.get(a.phase_id)?.sort_order ?? 0) - (phaseMap.get(b.phase_id)?.sort_order ?? 0));
+                    if (projectPlans.length === 0) return null;
+                    const phaseBarY = y + 15;
+                    return projectPlans.map((pp) => {
+                      const ppPhase = phaseMap.get(pp.phase_id);
+                      if (!ppPhase) return null;
+                      const ppStart = max([parseISO(pp.start_date), yearStart]);
+                      const ppEnd = min([parseISO(pp.end_date), yearEnd]);
+                      const px = LABEL_W + differenceInDays(ppStart, yearStart) * dayW;
+                      const pw = Math.max(1, (differenceInDays(ppEnd, ppStart) + 1) * dayW);
+                      return <rect key={pp.id} x={px} y={phaseBarY} width={pw} height={5} fill={ppPhase.color} />;
+                    });
+                  })()}
                 </a>
 
                 {/* Sub-rows for room groups */}
@@ -451,8 +470,25 @@ function GanttView({
                 <g key={p.id}>
                   <line x1={0} y1={rowY} x2={TIMELINE_W} y2={rowY} stroke="hsl(var(--border))" strokeWidth={0.5} />
                   <a href={`/projects/${p.id}`}>
-                    <rect x={x} y={y} width={w} height={20} rx={4} fill={color} fillOpacity={0.85} className="hover:fill-opacity-100 cursor-pointer" />
+                    <rect x={x} y={y} width={w} height={20} rx={4} fill="#94a3b8" fillOpacity={0.25} className="hover:fill-opacity-40 cursor-pointer" />
                     <line x1={x + w} y1={y - 2} x2={x + w} y2={y + 22} stroke={color} strokeWidth={2} />
+                    {/* Phase overlay */}
+                    {(() => {
+                      const projectPlans = (plansByGroup.get(p.id) || [])
+                        .filter((pp) => phaseMap.has(pp.phase_id))
+                        .sort((a, b) => (phaseMap.get(a.phase_id)?.sort_order ?? 0) - (phaseMap.get(b.phase_id)?.sort_order ?? 0));
+                      if (projectPlans.length === 0) return null;
+                      const phaseBarY = y + 15;
+                      return projectPlans.map((pp) => {
+                        const ppPhase = phaseMap.get(pp.phase_id);
+                        if (!ppPhase) return null;
+                        const ppStart = max([parseISO(pp.start_date), yearStart]);
+                        const ppEnd = min([parseISO(pp.end_date), yearEnd]);
+                        const px = differenceInDays(ppStart, yearStart) * dayW;
+                        const pw = Math.max(1, (differenceInDays(ppEnd, ppStart) + 1) * dayW);
+                        return <rect key={pp.id} x={px} y={phaseBarY} width={pw} height={5} fill={ppPhase.color} />;
+                      });
+                    })()}
                   </a>
                   {isExpanded && projGroups.map((g, gi) => {
                     const subY = rowY + ROW_H + gi * SUB_ROW_H;

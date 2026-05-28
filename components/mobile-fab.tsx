@@ -67,7 +67,7 @@ export function MobileFab() {
     <>
       <button
         onClick={handleClick}
-        className="md:hidden fixed bottom-[calc(72px+env(safe-area-inset-bottom)+12px)] left-1/2 -translate-x-1/2 z-50 h-11 px-5 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center gap-1.5 text-sm font-medium hover:opacity-90 active:scale-95 transition-transform"
+        className="md:hidden fixed bottom-[calc(72px+env(safe-area-inset-bottom)+12px)] left-1/2 -translate-x-1/2 z-40 h-11 px-5 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center gap-1.5 text-sm font-medium hover:opacity-90 active:scale-95 transition-transform"
       >
         <Plus size={18} strokeWidth={2.5} />
         {config.label}

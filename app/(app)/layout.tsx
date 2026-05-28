@@ -20,17 +20,19 @@ export default async function AppShell({ children }: { children: React.ReactNode
   if (!user) redirect("/login");
 
   const [{ data: profile }, { data: businessInfo }] = await Promise.all([
-    supabase.from("profiles").select("full_name, role, avatar_url, density_preference").eq("id", user.id).single(),
+    supabase.from("profiles").select("full_name, role, avatar_url, density_preference, deactivated_at").eq("id", user.id).single(),
     supabase.from("business_info").select("name, logo_url").eq("id", 1).single(),
   ]);
 
-  if (!profile) {
+  if (!profile || profile.deactivated_at) {
     return (
       <main className="min-h-screen grid place-items-center px-6">
         <div className="text-center max-w-sm">
           <h1 className="text-xl font-semibold mb-2">Access denied</h1>
           <p className="text-sm text-muted-foreground mb-4">
-            Your email hasn&apos;t been approved for this workspace. Ask an admin to add you.
+            {profile?.deactivated_at
+              ? "Your account has been deactivated. Contact an admin if this is a mistake."
+              : "Your email hasn't been approved for this workspace. Ask an admin to add you."}
           </p>
           <form action="/auth/signout" method="POST">
             <button type="submit" className="text-sm underline text-muted-foreground hover:text-foreground">

@@ -27,7 +27,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       .order("completed_at", { ascending: true, nullsFirst: true })
       .order("due_date", { ascending: true, nullsFirst: false }),
     supabase.from("phases").select("*").is("archived_at", null).order("sort_order"),
-    supabase.from("profiles").select("id, full_name"),
+    supabase.from("profiles").select("id, full_name").is("deactivated_at", null),
     supabase.from("room_groups").select("*").eq("project_id", id).order("sort_order"),
     supabase
       .from("calendar_events")

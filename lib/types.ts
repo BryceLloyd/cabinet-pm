@@ -20,6 +20,7 @@ export interface Phase {
   sort_order: number;
   color: string;
   is_default: boolean;
+  default_duration_days: number | null;
   created_at: string;
   archived_at: string | null;
 }
@@ -108,6 +109,7 @@ export interface PhasePlan {
   phase_id: string;
   start_date: string;
   end_date: string;
+  is_default: boolean;
   created_at: string;
   updated_at: string;
 }

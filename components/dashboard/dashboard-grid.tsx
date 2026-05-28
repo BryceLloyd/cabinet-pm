@@ -27,19 +27,26 @@ import { DashboardCard } from "./dashboard-card";
 import { CardSkeleton } from "./card-skeleton";
 import { AddCardDialog } from "./add-card-dialog";
 import { AddTaskPanel } from "@/components/tasks/add-task-panel";
+import { TaskDetailPanel } from "@/components/tasks/task-detail-panel";
 import { AddEventPanel } from "@/components/plan/add-event-panel";
+import { EventDetailPanel } from "@/components/plan/event-detail-panel";
 import { AddProjectPanel } from "@/components/projects/add-project-panel";
+import type { CalendarEvent, EventType, Project, RoomGroup } from "@/lib/types";
 
 function SortableCard({
   cardLayout,
   userId,
   isEditing,
   onRemove,
+  onTaskClick,
+  onEventClick,
 }: {
   cardLayout: CardLayout;
   userId: string;
   isEditing: boolean;
   onRemove: () => void;
+  onTaskClick?: (taskId: string) => void;
+  onEventClick?: (eventId: string) => void;
 }) {
   const definition = CARD_REGISTRY[cardLayout.cardType];
   const {
@@ -86,7 +93,7 @@ function SortableCard({
               isEditing={isEditing}
               onRemove={onRemove}
             >
-              <LazyComponent userId={userId} />
+              <LazyComponent userId={userId} onTaskClick={onTaskClick} onEventClick={onEventClick} />
             </DashboardCard>
           </Suspense>
         </div>
@@ -116,6 +123,11 @@ export function DashboardGrid({ userId }: { userId: string }) {
   const [roomGroups, setRoomGroups] = useState<{ id: string; name: string; project_id: string }[]>([]);
   const [dataLoaded, setDataLoaded] = useState(false);
 
+  // Detail panel state
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [selectedTask, setSelectedTask] = useState<any>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+
   const groupsByProject = useRef(new Map<string, { id: string; name: string; project_id: string }[]>());
 
   // Load panel data once
@@ -123,7 +135,7 @@ export function DashboardGrid({ userId }: { userId: string }) {
     if (dataLoaded) return;
     Promise.all([
       supabase.from("projects").select("id, name").in("status", ["planning", "active"]).order("name"),
-      supabase.from("profiles").select("id, full_name").order("full_name"),
+      supabase.from("profiles").select("id, full_name").is("deactivated_at", null).order("full_name"),
       supabase.from("event_types").select("id, name, color, archived_at").order("sort_order"),
       supabase.from("room_groups").select("id, name, project_id").order("sort_order"),
     ]).then(([{ data: p }, { data: pr }, { data: et }, { data: rg }]) => {
@@ -142,6 +154,33 @@ export function DashboardGrid({ userId }: { userId: string }) {
       setDataLoaded(true);
     });
   }, [dataLoaded, supabase]);
+
+  // Fetch and open task detail panel
+  const handleTaskClick = useCallback(async (taskId: string) => {
+    const { data } = await supabase
+      .from("tasks")
+      .select("id, title, description, due_date, priority, project_id, room_id, assigned_to, completed_at, completed_by, created_by, created_at, projects(name), rooms(name), assignee:profiles!tasks_assigned_to_fkey(full_name), completer:profiles!tasks_completed_by_fkey(full_name)")
+      .eq("id", taskId)
+      .single();
+    if (data) {
+      const row = data as Record<string, unknown>;
+      if (Array.isArray(row.projects)) row.projects = row.projects[0] || null;
+      if (Array.isArray(row.rooms)) row.rooms = row.rooms[0] || null;
+      if (Array.isArray(row.assignee)) row.assignee = row.assignee[0] || null;
+      if (Array.isArray(row.completer)) row.completer = row.completer[0] || null;
+      setSelectedTask(row);
+    }
+  }, [supabase]);
+
+  // Fetch and open event detail panel
+  const handleEventClick = useCallback(async (eventId: string) => {
+    const { data } = await supabase
+      .from("calendar_events")
+      .select("*")
+      .eq("id", eventId)
+      .single();
+    if (data) setSelectedEvent(data as CalendarEvent);
+  }, [supabase]);
 
   // Close quick-add menu on outside click
   useEffect(() => {
@@ -210,6 +249,8 @@ export function DashboardGrid({ userId }: { userId: string }) {
                 userId={userId}
                 isEditing={isEditing}
                 onRemove={() => removeCard(card.cardType)}
+                onTaskClick={handleTaskClick}
+                onEventClick={handleEventClick}
               />
             ))}
 
@@ -303,6 +344,29 @@ export function DashboardGrid({ userId }: { userId: string }) {
         groupsByProject={groupsByProject.current}
         onClose={() => setShowAddEvent(false)}
         onCreated={() => { setShowAddEvent(false); router.refresh(); }}
+      />
+
+      {/* Task detail panel */}
+      <TaskDetailPanel
+        task={selectedTask}
+        profiles={profiles}
+        userId={userId}
+        onClose={() => setSelectedTask(null)}
+        onUpdated={(updated) => { setSelectedTask(updated); router.refresh(); }}
+        onDeleted={() => { setSelectedTask(null); router.refresh(); }}
+        onToggleComplete={() => { setSelectedTask(null); router.refresh(); }}
+      />
+
+      {/* Event detail panel */}
+      <EventDetailPanel
+        event={selectedEvent}
+        eventTypes={eventTypes as EventType[]}
+        projects={projects as Project[]}
+        roomGroups={roomGroups as RoomGroup[]}
+        groupsByProject={groupsByProject.current as Map<string, RoomGroup[]>}
+        onClose={() => setSelectedEvent(null)}
+        onUpdated={(updated) => { setSelectedEvent(updated); router.refresh(); }}
+        onDeleted={() => { setSelectedEvent(null); router.refresh(); }}
       />
     </div>
   );

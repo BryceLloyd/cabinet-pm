@@ -80,7 +80,7 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
         .select("id, name")
         .in("status", ["planning", "active"])
         .order("name"),
-      supabase.from("profiles").select("id, full_name").order("full_name"),
+      supabase.from("profiles").select("id, full_name").is("deactivated_at", null).order("full_name"),
       supabase
         .from("event_types")
         .select("id, name, color")
@@ -277,6 +277,21 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
                     <div className="text-sm font-medium">Add task</div>
                     <div className="text-xs text-muted-foreground">
                       Create a task for this project
+                    </div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => {
+                    setEventProjectId(projectId || "");
+                    setView("quick-event");
+                  }}
+                  className="w-full flex items-center gap-3 p-4 rounded-lg border hover:bg-muted transition-colors"
+                >
+                  <CalendarPlus size={20} className="text-muted-foreground shrink-0" />
+                  <div className="text-left">
+                    <div className="text-sm font-medium">Add event</div>
+                    <div className="text-xs text-muted-foreground">
+                      Add a calendar event
                     </div>
                   </div>
                 </button>

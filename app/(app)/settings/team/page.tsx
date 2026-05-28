@@ -6,7 +6,7 @@ export default async function TeamSettingsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const [{ data: profiles }, { data: profile }] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, avatar_url, role").order("created_at"),
+    supabase.from("profiles").select("id, full_name, avatar_url, role").is("deactivated_at", null).order("created_at"),
     supabase.from("profiles").select("role").eq("id", user!.id).single(),
   ]);
 

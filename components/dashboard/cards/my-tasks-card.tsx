@@ -14,7 +14,7 @@ interface TaskRow {
   rooms: { name: string } | null;
 }
 
-export default function MyTasksCard({ userId }: CardProps) {
+export default function MyTasksCard({ userId, onTaskClick }: CardProps) {
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,7 +45,7 @@ export default function MyTasksCard({ userId }: CardProps) {
       {tasks.map((t) => {
         const overdue = t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date));
         return (
-          <li key={t.id} className="px-5 py-3 flex items-start gap-3">
+          <li key={t.id} className="px-5 py-3 flex items-start gap-3 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onTaskClick?.(t.id)}>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium truncate">{t.title}</div>
               <div className="text-xs text-muted-foreground mt-0.5">

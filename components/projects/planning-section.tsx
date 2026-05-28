@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ProjectGantt } from "@/components/projects/project-gantt";
-import { PhasePlanTable } from "@/components/projects/phase-plan-table";
 import { autoFillPhasePlans } from "@/lib/phase-plans";
 import type { Phase, PhasePlan, RoomGroup } from "@/lib/types";
 
@@ -21,7 +20,6 @@ export function PlanningSection({ projectId, projectStart, projectEnd, phases, g
   const [loading, setLoading] = useState(true);
 
   const loadPlans = useCallback(async () => {
-    // Fetch existing plans for this project's groups + project-level fallback
     const groupIds = groups.map((g) => g.id);
     let allPlans: PhasePlan[] = [];
 
@@ -33,7 +31,6 @@ export function PlanningSection({ projectId, projectStart, projectEnd, phases, g
       if (data) allPlans = [...allPlans, ...(data as PhasePlan[])];
     }
 
-    // Also fetch project-level plans
     const { data: projectPlans } = await supabase
       .from("phase_plans")
       .select("*")
@@ -48,7 +45,6 @@ export function PlanningSection({ projectId, projectStart, projectEnd, phases, g
     (async () => {
       let existing = await loadPlans();
 
-      // Auto-fill if no plans exist
       if (existing.length === 0 && phases.length > 0) {
         const entries = autoFillPhasePlans(projectStart, projectEnd, phases, groups, projectId);
         if (entries.length > 0) {
@@ -72,7 +68,7 @@ export function PlanningSection({ projectId, projectStart, projectEnd, phases, g
           <h2 className="font-medium">Planning</h2>
         </div>
         <div className="px-5 py-8 text-sm text-muted-foreground text-center animate-pulse">
-          Loading phase plans…
+          Loading…
         </div>
       </section>
     );
@@ -95,9 +91,6 @@ export function PlanningSection({ projectId, projectStart, projectEnd, phases, g
     <section className="rounded-lg border bg-card">
       <div className="px-5 py-3.5 border-b">
         <h2 className="font-medium">Planning</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Phase schedule per room group. Edit dates in the table below.
-        </p>
       </div>
       <div className="px-5 py-4">
         <ProjectGantt
@@ -106,14 +99,6 @@ export function PlanningSection({ projectId, projectStart, projectEnd, phases, g
           groups={groups}
           phasePlans={plans}
           phases={phases}
-        />
-      </div>
-      <div className="border-t">
-        <PhasePlanTable
-          plans={plans}
-          phases={phases}
-          groups={groups}
-          onUpdate={setPlans}
         />
       </div>
     </section>

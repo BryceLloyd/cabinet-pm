@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { format, isPast, isToday } from "date-fns";
@@ -56,6 +56,11 @@ export function TasksClient({
   const [tasks, setTasks] = useState(initialTasks);
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskRow | null>(null);
+  const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => { if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current); };
+  }, []);
 
   const FILTERS: { key: Filter; label: string }[] = [
     { key: "mine", label: "My tasks" },
@@ -68,21 +73,26 @@ export function TasksClient({
     const updates = task.completed_at
       ? { completed_at: null, completed_by: null }
       : { completed_at: new Date().toISOString(), completed_by: userId };
-    const { error } = await supabase.from("tasks").update(updates).eq("id", task.id);
-    if (!error) {
-      if (filter === "completed" && !task.completed_at) {
-        // Completing: keep in list for completed view
-        setTasks(tasks.map((t) => (t.id === task.id ? { ...t, ...updates } as TaskRow : t)));
-      } else if (filter === "completed" && task.completed_at) {
-        // Uncompleting from completed view: remove
-        setTasks(tasks.filter((t) => t.id !== task.id));
-      } else if (!task.completed_at) {
-        // Completing from open views: remove after brief delay
-        setTasks(tasks.map((t) => (t.id === task.id ? { ...t, ...updates } as TaskRow : t)));
-        setTimeout(() => setTasks((prev) => prev.filter((t) => t.id !== task.id)), 600);
+    const { data, error } = await supabase
+      .from("tasks")
+      .update(updates)
+      .eq("id", task.id)
+      .select("*, projects(name), rooms(name), assignee:assigned_to(full_name), completer:completed_by(full_name)")
+      .single();
+    if (!error && data) {
+      const updated = data as TaskRow;
+      if (filter === "completed" && task.completed_at) {
+        // Uncompleting from completed view: remove from list
+        setTasks((prev) => prev.filter((t) => t.id !== task.id));
+      } else if (!task.completed_at && filter !== "completed") {
+        // Completing from open views: show strikethrough then remove
+        setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)));
+        if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+        fadeTimerRef.current = setTimeout(() => setTasks((prev) => prev.filter((t) => t.id !== task.id)), 600);
       } else {
-        setTasks(tasks.map((t) => (t.id === task.id ? { ...t, ...updates } as TaskRow : t)));
+        setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)));
       }
+      if (selectedTask?.id === task.id) setSelectedTask(updated);
     }
   }
 
@@ -122,7 +132,6 @@ export function TasksClient({
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
-              <th className="w-10 px-4 py-2.5" />
               <th className="text-left font-medium px-4 py-2.5">Task</th>
               <th className="text-left font-medium px-4 py-2.5">Project / Room</th>
               <th className="text-left font-medium px-4 py-2.5">Assignee</th>
@@ -132,7 +141,7 @@ export function TasksClient({
           <tbody className="divide-y">
             {tasks.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                <td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">
                   No tasks. {filter === "mine" ? "You're all clear." : ""}
                 </td>
               </tr>
@@ -145,15 +154,6 @@ export function TasksClient({
                   className={`hover:bg-muted/30 cursor-pointer ${t.completed_at ? "opacity-50" : ""}`}
                   onClick={() => setSelectedTask(t)}
                 >
-                  <td className="px-4 py-3">
-                    <input
-                      type="checkbox"
-                      checked={!!t.completed_at}
-                      onChange={() => toggleTask(t)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="size-4 rounded border-input cursor-pointer"
-                    />
-                  </td>
                   <td className="px-4 py-3">
                     <div className={t.completed_at ? "line-through text-muted-foreground" : "font-medium"}>
                       {t.title}
@@ -190,34 +190,29 @@ export function TasksClient({
           return (
             <div
               key={t.id}
-              className={`rounded-lg border bg-card p-3 flex items-start gap-3 cursor-pointer ${t.completed_at ? "opacity-50" : ""}`}
+              className={`rounded-lg border bg-card p-3 cursor-pointer ${t.completed_at ? "opacity-50" : ""}`}
               onClick={() => setSelectedTask(t)}
             >
-              <input
-                type="checkbox"
-                checked={!!t.completed_at}
-                onChange={() => toggleTask(t)}
-                onClick={(e) => e.stopPropagation()}
-                className="mt-0.5 size-4 rounded border-input cursor-pointer shrink-0"
-              />
-              <div className="flex-1 min-w-0">
-                <div className={`text-sm ${t.completed_at ? "line-through text-muted-foreground" : "font-medium"}`}>
-                  {t.title}
+              <div className="flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className={`text-sm ${t.completed_at ? "line-through text-muted-foreground" : "font-medium"}`}>
+                    {t.title}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-2">
+                    {t.projects ? (
+                      <Link href={`/projects/${t.project_id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>{t.projects.name}</Link>
+                    ) : (
+                      <span className="italic">Personal</span>
+                    )}
+                    {t.assignee?.full_name && <span>{t.assignee.full_name}</span>}
+                  </div>
                 </div>
-                <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-2">
-                  {t.projects ? (
-                    <Link href={`/projects/${t.project_id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>{t.projects.name}</Link>
-                  ) : (
-                    <span className="italic">Personal</span>
-                  )}
-                  {t.assignee?.full_name && <span>{t.assignee.full_name}</span>}
-                </div>
+                {t.due_date && (
+                  <span className={`text-xs tabular-nums shrink-0 ${overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                    {format(new Date(t.due_date), "MMM d")}
+                  </span>
+                )}
               </div>
-              {t.due_date && (
-                <span className={`text-xs tabular-nums shrink-0 ${overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
-                  {format(new Date(t.due_date), "MMM d")}
-                </span>
-              )}
             </div>
           );
         })}

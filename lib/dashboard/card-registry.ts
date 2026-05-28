@@ -12,6 +12,8 @@ export interface CardDefinition {
 
 export interface CardProps {
   userId: string;
+  onTaskClick?: (taskId: string) => void;
+  onEventClick?: (eventId: string) => void;
 }
 
 export const CARD_REGISTRY: Record<string, CardDefinition> = {

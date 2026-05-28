@@ -51,6 +51,8 @@ function SortablePhaseRow({
   onNameChange,
   onNameBlur,
   onColorChange,
+  onDurationChange,
+  onDurationBlur,
   onSetDefault,
   onArchive,
 }: {
@@ -59,6 +61,8 @@ function SortablePhaseRow({
   onNameChange: (id: string, name: string) => void;
   onNameBlur: (id: string) => void;
   onColorChange: (id: string, color: string) => void;
+  onDurationChange: (id: string, days: number | null) => void;
+  onDurationBlur: (id: string) => void;
   onSetDefault: (id: string) => void;
   onArchive: (id: string) => void;
 }) {
@@ -73,6 +77,12 @@ function SortablePhaseRow({
   };
 
   if (!editing) {
+    const durationLabel = phase.default_duration_days != null
+      ? phase.default_duration_days >= 7 && phase.default_duration_days % 7 === 0
+        ? `${phase.default_duration_days / 7}w`
+        : `${phase.default_duration_days}d`
+      : null;
+
     // Read-only row
     return (
       <li className="px-5 py-3 flex items-center justify-between">
@@ -86,6 +96,9 @@ function SortablePhaseRow({
             <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
               default
             </span>
+          )}
+          {durationLabel && (
+            <span className="text-xs text-muted-foreground">{durationLabel}</span>
           )}
         </div>
         <span className="text-xs text-muted-foreground tabular-nums">
@@ -156,6 +169,28 @@ function SortablePhaseRow({
         className="flex-1 h-8 px-2 text-sm rounded-md border bg-background min-w-0"
       />
 
+      {/* Duration input */}
+      <div className="shrink-0 flex items-center gap-1">
+        <input
+          type="number"
+          min={0}
+          placeholder="—"
+          value={phase.default_duration_days ?? ""}
+          onChange={(e) =>
+            onDurationChange(
+              phase.id,
+              e.target.value === "" ? null : Number(e.target.value)
+            )
+          }
+          onBlur={() => onDurationBlur(phase.id)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          }}
+          className="w-14 h-8 px-2 text-sm text-center rounded-md border bg-background [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        />
+        <span className="text-xs text-muted-foreground">days</span>
+      </div>
+
       {/* Default radio */}
       <button
         onClick={() => !phase.is_default && onSetDefault(phase.id)}
@@ -215,6 +250,35 @@ export function PhaseManager({ initialPhases, isAdmin }: Props) {
         .from("phases")
         .update({ name: phase.name.trim() })
         .eq("id", id);
+    },
+    [phases, supabase]
+  );
+
+  /* ── Duration editing ── */
+
+  const handleDurationChange = useCallback(
+    (id: string, days: number | null) => {
+      setPhases((prev) =>
+        prev.map((p) =>
+          p.id === id ? { ...p, default_duration_days: days } : p
+        )
+      );
+    },
+    []
+  );
+
+  const handleDurationBlur = useCallback(
+    async (id: string) => {
+      const phase = phases.find((p) => p.id === id);
+      if (!phase) return;
+      await supabase
+        .from("phases")
+        .update({ default_duration_days: phase.default_duration_days })
+        .eq("id", id);
+      // Recalculate all project phase plans that still use defaults
+      if (phase.default_duration_days != null) {
+        await supabase.rpc("sync_phase_defaults", { p_phase_id: id });
+      }
     },
     [phases, supabase]
   );
@@ -381,6 +445,8 @@ export function PhaseManager({ initialPhases, isAdmin }: Props) {
                   onNameChange={handleNameChange}
                   onNameBlur={handleNameBlur}
                   onColorChange={handleColorChange}
+                  onDurationChange={handleDurationChange}
+                  onDurationBlur={handleDurationBlur}
                   onSetDefault={handleSetDefault}
                   onArchive={handleArchive}
                 />
@@ -398,6 +464,8 @@ export function PhaseManager({ initialPhases, isAdmin }: Props) {
               onNameChange={() => {}}
               onNameBlur={() => {}}
               onColorChange={() => {}}
+              onDurationChange={() => {}}
+              onDurationBlur={() => {}}
               onSetDefault={() => {}}
               onArchive={() => {}}
             />

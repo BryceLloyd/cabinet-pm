@@ -68,7 +68,7 @@ export function UserMenu({
         <DropdownMenu.Content
           align="end"
           sideOffset={8}
-          className="z-50 min-w-[200px] rounded-lg border bg-popover p-1 shadow-md animate-in fade-in-0 zoom-in-95"
+          className="z-50 min-w-[200px] rounded-lg border bg-background p-1 shadow-md animate-in fade-in-0 zoom-in-95"
         >
           {/* Header */}
           <div className="px-3 py-2">

@@ -10,7 +10,7 @@ interface TodoRow {
   completed_at: string | null;
 }
 
-export default function PersonalTodosCard({ userId }: CardProps) {
+export default function PersonalTodosCard({ userId, onTaskClick }: CardProps) {
   const [todos, setTodos] = useState<TodoRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -51,9 +51,9 @@ export default function PersonalTodosCard({ userId }: CardProps) {
         <li className="px-5 py-8 text-sm text-muted-foreground text-center">No personal todos.</li>
       )}
       {todos.map((t) => (
-        <li key={t.id} className="px-5 py-3 flex items-center gap-3">
+        <li key={t.id} className="px-5 py-3 flex items-center gap-3 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onTaskClick?.(t.id)}>
           <button
-            onClick={() => toggleComplete(t.id)}
+            onClick={(e) => { e.stopPropagation(); toggleComplete(t.id); }}
             className="h-4 w-4 rounded border border-muted-foreground/30 shrink-0 hover:border-foreground transition-colors"
             aria-label={`Complete "${t.title}"`}
           />

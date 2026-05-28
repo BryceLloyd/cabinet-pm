@@ -22,7 +22,7 @@ export default function TeamWorkloadCard({ userId }: CardProps) {
         .select("assigned_to")
         .is("completed_at", null)
         .not("assigned_to", "is", null),
-      supabase.from("profiles").select("id, full_name"),
+      supabase.from("profiles").select("id, full_name").is("deactivated_at", null),
     ]).then(([{ data: tasks }, { data: profiles }]) => {
       const counts = new Map<string, number>();
       (tasks || []).forEach((t) => {

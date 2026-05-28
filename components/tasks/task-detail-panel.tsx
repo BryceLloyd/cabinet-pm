@@ -99,6 +99,7 @@ export function TaskDetailPanel({
   const projectLabel = task.projects
     ? `${task.projects.name}${task.rooms ? ` · ${task.rooms.name}` : ""}`
     : "Personal";
+  const creatorName = profiles.find((p) => p.id === task.created_by)?.full_name;
 
   return (
     <SlidePanel
@@ -107,14 +108,8 @@ export function TaskDetailPanel({
       title="Task Detail"
       onDelete={handleDelete}
     >
-      {/* Checkbox + Title */}
-      <div className="flex items-start gap-3 mb-5">
-        <input
-          type="checkbox"
-          checked={!!task.completed_at}
-          onChange={() => onToggleComplete(task)}
-          className="mt-1 size-[18px] rounded border-input cursor-pointer shrink-0"
-        />
+      {/* Title */}
+      <div className="mb-5">
         <input
           type="text"
           value={title}
@@ -122,9 +117,19 @@ export function TaskDetailPanel({
             setTitle(e.target.value);
             autoSave("title", e.target.value);
           }}
-          className="flex-1 text-[15px] font-medium bg-transparent border border-transparent hover:border-border focus:border-border rounded px-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-ring"
+          className="w-full text-[15px] font-medium bg-transparent border border-transparent hover:border-border focus:border-border rounded px-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-ring"
         />
       </div>
+
+      {/* Complete button – open tasks only */}
+      {!task.completed_at && (
+        <button
+          onClick={() => onToggleComplete(task)}
+          className="w-full h-9 rounded-md text-sm font-medium mb-5 bg-primary text-primary-foreground hover:opacity-90 transition-colors"
+        >
+          Complete
+        </button>
+      )}
 
       {/* Due date */}
       <div className="mb-4">
@@ -180,8 +185,12 @@ export function TaskDetailPanel({
       </div>
 
       {/* Meta footer */}
-      <div className="pt-3 border-t text-[11px] text-muted-foreground">
-        Created {format(new Date(task.created_at), "MMM d, yyyy")} · {projectLabel}
+      <div className="pt-3 border-t text-[11px] text-muted-foreground space-y-0.5">
+        <div>{projectLabel}</div>
+        <div>Created {format(new Date(task.created_at), "MMM d, yyyy")}{creatorName ? ` by ${creatorName}` : ""}</div>
+        {task.completed_at && (
+          <div>Completed {format(new Date(task.completed_at), "MMM d, yyyy")}{task.completer?.full_name ? ` by ${task.completer.full_name}` : ""}</div>
+        )}
       </div>
     </SlidePanel>
   );

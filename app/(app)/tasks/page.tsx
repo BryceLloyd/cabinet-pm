@@ -18,14 +18,24 @@ export default async function TasksPage({
 
   let query = supabase
     .from("tasks")
-    .select("*, projects(name), rooms(name), assignee:assigned_to(full_name), completer:completed_by(full_name)")
-    .order("due_date", { ascending: true, nullsFirst: false })
-    .order("created_at", { ascending: false });
+    .select("*, projects(name), rooms(name), assignee:assigned_to(full_name), completer:completed_by(full_name)");
 
-  if (filter === "mine") query = query.eq("assigned_to", user!.id).is("completed_at", null);
-  else if (filter === "personal") query = query.is("project_id", null).is("room_id", null).eq("created_by", user!.id);
-  else if (filter === "completed") query = query.not("completed_at", "is", null);
-  else if (filter === "all") query = query.is("completed_at", null);
+  if (filter === "mine") {
+    query = query.eq("assigned_to", user!.id).is("completed_at", null)
+      .order("due_date", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false });
+  } else if (filter === "personal") {
+    query = query.is("project_id", null).is("room_id", null).eq("created_by", user!.id).is("completed_at", null)
+      .order("due_date", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false });
+  } else if (filter === "completed") {
+    query = query.not("completed_at", "is", null)
+      .order("completed_at", { ascending: false });
+  } else if (filter === "all") {
+    query = query.is("completed_at", null)
+      .order("due_date", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false });
+  }
 
   const [{ data: tasks }, { data: projects }, { data: profiles }] = await Promise.all([
     query,
@@ -34,11 +44,12 @@ export default async function TasksPage({
       .select("id, name")
       .in("status", ["planning", "active"])
       .order("name"),
-    supabase.from("profiles").select("id, full_name"),
+    supabase.from("profiles").select("id, full_name").is("deactivated_at", null),
   ]);
 
   return (
     <TasksClient
+      key={filter}
       initialTasks={tasks || []}
       projects={projects || []}
       profiles={profiles || []}

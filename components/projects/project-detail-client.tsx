@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Project, Room, Task, Phase, Profile, ProjectStatus, RoomGroup, CalendarEvent, EventType } from "@/lib/types";
 import { RoomGroupManager } from "@/components/projects/room-group-manager";
-import { PlanningSection } from "@/components/projects/planning-section";
 import { ProjectEventsSection } from "@/components/projects/project-events-section";
-import { format, addWeeks } from "date-fns";
+import { ProjectPhasePlan } from "@/components/projects/project-phase-plan";
+import { format, addWeeks, differenceInCalendarWeeks } from "date-fns";
 
 interface Props {
   project: Project;
@@ -141,9 +141,14 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
     const updates = task.completed_at
       ? { completed_at: null, completed_by: null }
       : { completed_at: new Date().toISOString(), completed_by: user.user.id };
-    const { error } = await supabase.from("tasks").update(updates).eq("id", task.id);
-    if (!error) {
-      setTasks(tasks.map((t) => (t.id === task.id ? { ...t, ...updates } as Task : t)));
+    const { data, error } = await supabase
+      .from("tasks")
+      .update(updates)
+      .eq("id", task.id)
+      .select("*")
+      .single();
+    if (!error && data) {
+      setTasks(tasks.map((t) => (t.id === task.id ? data as Task : t)));
     }
   }
 
@@ -188,6 +193,28 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
   const computedStart = editForm.estimated_completion_date
     ? format(addWeeks(new Date(editForm.estimated_completion_date), -editForm.lead_time_weeks), "MMM d, yyyy")
     : "—";
+
+  const planningStartDate = addWeeks(new Date(project.estimated_completion_date), -project.lead_time_weeks);
+
+  const completionSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveCompletionDate = useCallback(
+    (date: string) => {
+      if (completionSaveTimer.current) clearTimeout(completionSaveTimer.current);
+      completionSaveTimer.current = setTimeout(async () => {
+        const { data, error } = await supabase
+          .from("projects")
+          .update({ estimated_completion_date: date })
+          .eq("id", project.id)
+          .select("*")
+          .single();
+        if (!error && data) {
+          setProject(data as Project);
+          router.refresh();
+        }
+      }, 800);
+    },
+    [supabase, project.id, router],
+  );
 
   return (
     <div className="space-y-6">
@@ -375,44 +402,6 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
             );
           })}
         </ul>
-        <div className="px-5 py-3 border-t space-y-2">
-          <input
-            value={newTaskTitle}
-            onChange={(e) => setNewTaskTitle(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && addTask()}
-            placeholder="New task…"
-            className="w-full h-8 px-3 text-sm rounded-md border bg-background"
-          />
-          <div className="flex gap-2">
-            <select
-              value={newTaskRoomGroup}
-              onChange={(e) => setNewTaskRoomGroup(e.target.value)}
-              className="flex-1 h-8 px-2 text-xs rounded-md border bg-background"
-            >
-              <option value="">No group</option>
-              {roomGroups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-            </select>
-            <select
-              value={newTaskRoom}
-              onChange={(e) => setNewTaskRoom(e.target.value)}
-              className="flex-1 h-8 px-2 text-xs rounded-md border bg-background"
-            >
-              <option value="">No specific room</option>
-              {rooms.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
-            <select
-              value={newTaskAssignee}
-              onChange={(e) => setNewTaskAssignee(e.target.value)}
-              className="flex-1 h-8 px-2 text-xs rounded-md border bg-background"
-            >
-              <option value="">Unassigned</option>
-              {profiles.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
-            </select>
-            <button onClick={addTask} className="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90">
-              Add
-            </button>
-          </div>
-        </div>
       </section>
 
       {/* Room Groups */}
@@ -514,28 +503,47 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
             );
           })}
         </ul>
-        <div className="px-5 py-3 border-t flex gap-2">
-          <input
-            value={newRoomName}
-            onChange={(e) => setNewRoomName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && addRoom()}
-            placeholder="Add a room (e.g. Main Kitchen, Pantry)"
-            className="flex-1 h-8 px-3 text-sm rounded-md border bg-background"
-          />
-          <button onClick={addRoom} className="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90">
-            Add
-          </button>
-        </div>
       </section>
 
       {/* Planning */}
-      <PlanningSection
-        projectId={project.id}
-        projectStart={project.start_date}
-        projectEnd={project.estimated_completion_date}
-        phases={phases}
-        groups={roomGroups}
-      />
+      <section className="rounded-lg border bg-card">
+        <div className="px-5 py-3.5 border-b">
+          <h2 className="font-medium">Planning</h2>
+        </div>
+        <div className="px-5 py-4 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+                Completion date
+              </label>
+              <input
+                type="date"
+                value={project.estimated_completion_date}
+                onChange={(e) => {
+                  setProject({ ...project, estimated_completion_date: e.target.value });
+                  saveCompletionDate(e.target.value);
+                }}
+                className="w-full h-9 px-3 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+                Lead time
+              </label>
+              <div className="h-9 px-3 rounded-md border bg-muted/50 text-sm flex items-center text-muted-foreground">
+                {project.lead_time_weeks} weeks
+              </div>
+            </div>
+          </div>
+
+          <ProjectPhasePlan
+            projectId={project.id}
+            projectStart={project.start_date}
+            projectEnd={project.estimated_completion_date}
+            phases={phases}
+          />
+        </div>
+      </section>
     </div>
   );
 }
