@@ -130,16 +130,6 @@ export function DashboardGrid({ userId }: { userId: string }) {
 
   return (
     <div className="container py-6 md:py-8 px-4">
-      <div className="flex justify-end mb-4">
-        <button
-          onClick={() => setIsEditing(!isEditing)}
-          className="h-8 px-3 rounded-md text-xs font-medium transition-colors inline-flex items-center gap-1.5 border hover:bg-muted"
-        >
-          <Pencil size={14} />
-          {isEditing ? "Done" : "Customise"}
-        </button>
-      </div>
-
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={activeCardTypes} strategy={rectSortingStrategy}>
           <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: "var(--density-gap)" }}>
@@ -172,6 +162,15 @@ export function DashboardGrid({ userId }: { userId: string }) {
         activeCardTypes={activeCardTypes}
         onAdd={addCard}
       />
+
+      {/* Floating pill – desktop only */}
+      <button
+        onClick={() => setIsEditing(!isEditing)}
+        className="hidden md:inline-flex fixed bottom-6 right-6 z-40 items-center gap-2 h-10 pl-4 pr-5 rounded-full bg-primary text-primary-foreground text-sm font-medium shadow-lg hover:opacity-90 transition-opacity"
+      >
+        <Pencil size={14} />
+        {isEditing ? "Done" : "Customise"}
+      </button>
     </div>
   );
 }

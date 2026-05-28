@@ -34,6 +34,8 @@ export function YearPlanView({ year, initialView, projects, phases, roomGroups, 
   const [scrollTrigger, setScrollTrigger] = useState(0);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [events, setEvents] = useState(calendarEvents);
+  const [showAddEvent, setShowAddEvent] = useState(false);
+  const [addEventDate, setAddEventDate] = useState<string | undefined>(undefined);
 
   // Sync events state when server props change (e.g. after navigation)
   useEffect(() => {
@@ -85,6 +87,11 @@ export function YearPlanView({ year, initialView, projects, phases, roomGroups, 
       setQuery({ year: String(currentYear) });
     }
     setScrollTrigger((n) => n + 1);
+  }
+
+  function openAddEvent(date?: string) {
+    setAddEventDate(date);
+    setShowAddEvent(true);
   }
 
   return (
@@ -145,7 +152,7 @@ export function YearPlanView({ year, initialView, projects, phases, roomGroups, 
         <CalendarView year={year} projects={projects} phaseMap={phaseMap} scrollTrigger={scrollTrigger}
           events={events} eventTypeMap={eventTypeMap} eventTypes={eventTypes}
           roomGroups={roomGroups} groupsByProject={groupsByProject}
-          onEventAdded={(e) => setEvents((prev) => [...prev, e])}
+          onOpenAddEvent={openAddEvent}
           onEventUpdated={(updated) => setEvents((prev) => prev.map((e) => e.id === updated.id ? updated : e))}
           onEventDeleted={(id) => setEvents((prev) => prev.filter((e) => e.id !== id))} />
       ) : (
@@ -161,6 +168,27 @@ export function YearPlanView({ year, initialView, projects, phases, roomGroups, 
           onEventDeleted={(id) => setEvents((prev) => prev.filter((e) => e.id !== id))}
         />
       )}
+
+      {/* Floating pill – desktop only */}
+      <button
+        onClick={() => openAddEvent()}
+        className="hidden md:inline-flex fixed bottom-6 right-6 z-40 items-center gap-2 h-10 pl-4 pr-5 rounded-full bg-primary text-primary-foreground text-sm font-medium shadow-lg hover:opacity-90 transition-opacity"
+      >
+        <CalendarPlus size={18} />
+        New event
+      </button>
+
+      {/* Add event slide panel */}
+      <AddEventPanel
+        open={showAddEvent}
+        date={addEventDate}
+        projects={projects}
+        eventTypes={eventTypes}
+        roomGroups={roomGroups}
+        groupsByProject={groupsByProject}
+        onClose={() => setShowAddEvent(false)}
+        onCreated={(e) => setEvents((prev) => [...prev, e])}
+      />
     </div>
   );
 }
@@ -481,18 +509,16 @@ function GanttView({
 function CalendarView({
   year, projects, phaseMap, scrollTrigger,
   events, eventTypeMap, eventTypes, roomGroups, groupsByProject,
-  onEventAdded, onEventUpdated, onEventDeleted,
+  onOpenAddEvent, onEventUpdated, onEventDeleted,
 }: {
   year: number; projects: Project[]; phaseMap: Map<string, Phase>; scrollTrigger: number;
   events: CalendarEvent[]; eventTypeMap: Map<string, EventType>; eventTypes: EventType[];
   roomGroups: RoomGroup[]; groupsByProject: Map<string, RoomGroup[]>;
-  onEventAdded: (e: CalendarEvent) => void;
+  onOpenAddEvent: (date?: string) => void;
   onEventUpdated: (e: CalendarEvent) => void;
   onEventDeleted: (id: string) => void;
 }) {
   const todayMonthRef = useRef<HTMLDivElement>(null);
-  const [addEventDate, setAddEventDate] = useState<string | undefined>(undefined);
-  const [showAddEvent, setShowAddEvent] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const months = eachMonthOfInterval({
     start: new Date(year, 0, 1),
@@ -533,11 +559,6 @@ function CalendarView({
     return m;
   }, [events]);
 
-  function openAddEvent(date?: string) {
-    setAddEventDate(date);
-    setShowAddEvent(true);
-  }
-
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -551,33 +572,12 @@ function CalendarView({
             eventTypeMap={eventTypeMap}
             phaseMap={phaseMap}
             isCurrentMonth={i === todayMonthIndex}
-            onDayClick={(date) => openAddEvent(date)}
+            onDayClick={(date) => onOpenAddEvent(date)}
             onEventClick={(ev) => setSelectedEvent(ev)}
             onDeleteEvent={onEventDeleted}
           />
         ))}
       </div>
-
-      {/* Floating pill – desktop only */}
-      <button
-        onClick={() => openAddEvent()}
-        className="hidden md:inline-flex fixed bottom-6 right-6 z-40 items-center gap-2 h-10 pl-4 pr-5 rounded-full bg-primary text-primary-foreground text-sm font-medium shadow-lg hover:opacity-90 transition-opacity"
-      >
-        <CalendarPlus size={18} />
-        New event
-      </button>
-
-      {/* Add event slide panel */}
-      <AddEventPanel
-        open={showAddEvent}
-        date={addEventDate}
-        projects={projects}
-        eventTypes={eventTypes}
-        roomGroups={roomGroups}
-        groupsByProject={groupsByProject}
-        onClose={() => setShowAddEvent(false)}
-        onCreated={(e) => onEventAdded(e)}
-      />
 
       {/* Event detail panel */}
       <EventDetailPanel
