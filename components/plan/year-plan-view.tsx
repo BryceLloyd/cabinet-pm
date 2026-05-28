@@ -12,10 +12,11 @@ import {
 import { Plus, X, CalendarPlus } from "lucide-react";
 import type { Project, Phase, RoomGroup, PhasePlan, CalendarEvent, EventType } from "@/lib/types";
 import { EventDetailPanel } from "@/components/plan/event-detail-panel";
+import { EventsListView } from "@/components/plan/events-list-view";
 
 interface Props {
   year: number;
-  initialView: "gantt" | "calendar";
+  initialView: "gantt" | "calendar" | "events";
   projects: Project[];
   phases: Phase[];
   roomGroups: RoomGroup[];
@@ -115,6 +116,10 @@ export function YearPlanView({ year, initialView, projects, phases, roomGroups, 
                 onClick={() => { setView("calendar"); setQuery({ view: "calendar" }); }}
                 className={`h-7 px-3 text-xs rounded ${view === "calendar" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
               >Calendar</button>
+              <button
+                onClick={() => { setView("events"); setQuery({ view: "events" }); }}
+                className={`h-7 px-3 text-xs rounded ${view === "events" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+              >Events</button>
             </div>
             <button
               onClick={handleToday}
@@ -135,13 +140,25 @@ export function YearPlanView({ year, initialView, projects, phases, roomGroups, 
         <GanttView year={year} projects={projects} phaseMap={phaseMap} scrollTrigger={scrollTrigger}
           showRoomGroups={showRoomGroups} expanded={expanded} toggleExpand={toggleExpand}
           groupsByProject={groupsByProject} plansByGroup={plansByGroup} />
-      ) : (
+      ) : view === "calendar" ? (
         <CalendarView year={year} projects={projects} phaseMap={phaseMap} scrollTrigger={scrollTrigger}
           events={events} eventTypeMap={eventTypeMap} eventTypes={eventTypes}
           roomGroups={roomGroups} groupsByProject={groupsByProject}
           onEventAdded={(e) => setEvents((prev) => [...prev, e])}
           onEventUpdated={(updated) => setEvents((prev) => prev.map((e) => e.id === updated.id ? updated : e))}
           onEventDeleted={(id) => setEvents((prev) => prev.filter((e) => e.id !== id))} />
+      ) : (
+        <EventsListView
+          year={year}
+          events={events}
+          eventTypes={eventTypes}
+          eventTypeMap={eventTypeMap}
+          projects={projects}
+          roomGroups={roomGroups}
+          groupsByProject={groupsByProject}
+          onEventUpdated={(updated) => setEvents((prev) => prev.map((e) => e.id === updated.id ? updated : e))}
+          onEventDeleted={(id) => setEvents((prev) => prev.filter((e) => e.id !== id))}
+        />
       )}
     </div>
   );
