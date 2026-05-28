@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { format } from "date-fns";
+import { AddProjectFab } from "@/components/projects/add-project-fab";
 
 export default async function ProjectsPage() {
   const supabase = await createClient();
@@ -89,14 +89,7 @@ export default async function ProjectsPage() {
         })}
       </div>
 
-      {/* Floating pill – desktop only */}
-      <Link
-        href="/projects/new"
-        className="hidden md:inline-flex fixed bottom-6 right-6 z-40 items-center gap-2 h-10 pl-4 pr-5 rounded-full bg-primary text-primary-foreground text-sm font-medium shadow-lg hover:opacity-90 transition-opacity"
-      >
-        <Plus size={18} />
-        New project
-      </Link>
+      <AddProjectFab />
     </div>
   );
 }

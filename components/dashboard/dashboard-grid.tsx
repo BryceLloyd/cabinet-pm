@@ -28,6 +28,7 @@ import { CardSkeleton } from "./card-skeleton";
 import { AddCardDialog } from "./add-card-dialog";
 import { AddTaskPanel } from "@/components/tasks/add-task-panel";
 import { AddEventPanel } from "@/components/plan/add-event-panel";
+import { AddProjectPanel } from "@/components/projects/add-project-panel";
 
 function SortableCard({
   cardLayout,
@@ -103,6 +104,7 @@ export function DashboardGrid({ userId }: { userId: string }) {
 
   // Quick-add menu + slide panel state
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [showAddProject, setShowAddProject] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
   const [showAddEvent, setShowAddEvent] = useState(false);
   const quickAddRef = useRef<HTMLDivElement>(null);
@@ -236,7 +238,7 @@ export function DashboardGrid({ userId }: { userId: string }) {
         {showQuickAdd && (
           <div className="absolute bottom-full right-0 mb-2 w-56 rounded-lg border bg-card shadow-lg py-1 animate-in fade-in slide-in-from-bottom-2 duration-150">
             <button
-              onClick={() => { setShowQuickAdd(false); router.push("/projects/new"); }}
+              onClick={() => { setShowQuickAdd(false); setShowAddProject(true); }}
               className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors"
             >
               <FolderKanban size={16} className="text-muted-foreground shrink-0" />
@@ -275,6 +277,12 @@ export function DashboardGrid({ userId }: { userId: string }) {
           Add
         </button>
       </div>
+
+      {/* Add project slide panel */}
+      <AddProjectPanel
+        open={showAddProject}
+        onClose={() => setShowAddProject(false)}
+      />
 
       {/* Add task slide panel */}
       <AddTaskPanel
