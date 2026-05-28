@@ -1,6 +1,7 @@
 "use client";
 
-import { Suspense, useCallback, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   DndContext,
   closestCenter,
@@ -18,12 +19,15 @@ import {
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Plus, Pencil } from "lucide-react";
+import { GripVertical, Plus, Pencil, FolderKanban, CheckSquare, CalendarPlus } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import { CARD_REGISTRY, type CardProps } from "@/lib/dashboard/card-registry";
 import { getLayout, setLayout, type CardLayout } from "@/lib/dashboard/dashboard-layout";
 import { DashboardCard } from "./dashboard-card";
 import { CardSkeleton } from "./card-skeleton";
 import { AddCardDialog } from "./add-card-dialog";
+import { AddTaskPanel } from "@/components/tasks/add-task-panel";
+import { AddEventPanel } from "@/components/plan/add-event-panel";
 
 function SortableCard({
   cardLayout,
@@ -91,9 +95,63 @@ function SortableCard({
 }
 
 export function DashboardGrid({ userId }: { userId: string }) {
+  const router = useRouter();
+  const supabase = createClient();
   const [cards, setCards] = useState<CardLayout[]>(() => getLayout(userId));
   const [isEditing, setIsEditing] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
+
+  // Quick-add menu + slide panel state
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [showAddTask, setShowAddTask] = useState(false);
+  const [showAddEvent, setShowAddEvent] = useState(false);
+  const quickAddRef = useRef<HTMLDivElement>(null);
+
+  // Data for slide panels (loaded once on mount)
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
+  const [profiles, setProfiles] = useState<{ id: string; full_name: string }[]>([]);
+  const [eventTypes, setEventTypes] = useState<{ id: string; name: string; color: string; archived_at: string | null }[]>([]);
+  const [roomGroups, setRoomGroups] = useState<{ id: string; name: string; project_id: string }[]>([]);
+  const [dataLoaded, setDataLoaded] = useState(false);
+
+  const groupsByProject = useRef(new Map<string, { id: string; name: string; project_id: string }[]>());
+
+  // Load panel data once
+  useEffect(() => {
+    if (dataLoaded) return;
+    Promise.all([
+      supabase.from("projects").select("id, name").in("status", ["planning", "active"]).order("name"),
+      supabase.from("profiles").select("id, full_name").order("full_name"),
+      supabase.from("event_types").select("id, name, color, archived_at").order("sort_order"),
+      supabase.from("room_groups").select("id, name, project_id").order("sort_order"),
+    ]).then(([{ data: p }, { data: pr }, { data: et }, { data: rg }]) => {
+      setProjects(p || []);
+      setProfiles(pr || []);
+      setEventTypes(et || []);
+      const groups = rg || [];
+      setRoomGroups(groups);
+      const map = new Map<string, typeof groups>();
+      groups.forEach((g) => {
+        const list = map.get(g.project_id) || [];
+        list.push(g);
+        map.set(g.project_id, list);
+      });
+      groupsByProject.current = map;
+      setDataLoaded(true);
+    });
+  }, [dataLoaded, supabase]);
+
+  // Close quick-add menu on outside click
+  useEffect(() => {
+    if (!showQuickAdd) return;
+    function handleClick(e: MouseEvent) {
+      if (quickAddRef.current && !quickAddRef.current.contains(e.target as Node)) {
+        setShowQuickAdd(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showQuickAdd]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -130,6 +188,16 @@ export function DashboardGrid({ userId }: { userId: string }) {
 
   return (
     <div className="container py-6 md:py-8 px-4">
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={() => setIsEditing(!isEditing)}
+          className="h-8 px-3 rounded-md text-xs font-medium transition-colors inline-flex items-center gap-1.5 border hover:bg-muted"
+        >
+          <Pencil size={14} />
+          {isEditing ? "Done" : "Customise"}
+        </button>
+      </div>
+
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={activeCardTypes} strategy={rectSortingStrategy}>
           <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: "var(--density-gap)" }}>
@@ -163,14 +231,71 @@ export function DashboardGrid({ userId }: { userId: string }) {
         onAdd={addCard}
       />
 
-      {/* Floating pill – desktop only */}
-      <button
-        onClick={() => setIsEditing(!isEditing)}
-        className="hidden md:inline-flex fixed bottom-6 right-6 z-40 items-center gap-2 h-10 pl-4 pr-5 rounded-full bg-primary text-primary-foreground text-sm font-medium shadow-lg hover:opacity-90 transition-opacity"
-      >
-        <Pencil size={14} />
-        {isEditing ? "Done" : "Customise"}
-      </button>
+      {/* Floating pill + quick-add menu – desktop only */}
+      <div ref={quickAddRef} className="hidden md:block fixed bottom-6 right-6 z-40">
+        {showQuickAdd && (
+          <div className="absolute bottom-full right-0 mb-2 w-56 rounded-lg border bg-card shadow-lg py-1 animate-in fade-in slide-in-from-bottom-2 duration-150">
+            <button
+              onClick={() => { setShowQuickAdd(false); router.push("/projects/new"); }}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors"
+            >
+              <FolderKanban size={16} className="text-muted-foreground shrink-0" />
+              <div className="text-left">
+                <div className="text-sm font-medium">New project</div>
+                <div className="text-[11px] text-muted-foreground">Create a new project</div>
+              </div>
+            </button>
+            <button
+              onClick={() => { setShowQuickAdd(false); setShowAddTask(true); }}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors"
+            >
+              <CheckSquare size={16} className="text-muted-foreground shrink-0" />
+              <div className="text-left">
+                <div className="text-sm font-medium">New task</div>
+                <div className="text-[11px] text-muted-foreground">Add a task or personal todo</div>
+              </div>
+            </button>
+            <button
+              onClick={() => { setShowQuickAdd(false); setShowAddEvent(true); }}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors"
+            >
+              <CalendarPlus size={16} className="text-muted-foreground shrink-0" />
+              <div className="text-left">
+                <div className="text-sm font-medium">Add event</div>
+                <div className="text-[11px] text-muted-foreground">Add a calendar event</div>
+              </div>
+            </button>
+          </div>
+        )}
+        <button
+          onClick={() => setShowQuickAdd(!showQuickAdd)}
+          className="inline-flex items-center gap-2 h-10 pl-4 pr-5 rounded-full bg-primary text-primary-foreground text-sm font-medium shadow-lg hover:opacity-90 transition-opacity"
+        >
+          <Plus size={18} />
+          Add
+        </button>
+      </div>
+
+      {/* Add task slide panel */}
+      <AddTaskPanel
+        open={showAddTask}
+        projects={projects}
+        profiles={profiles}
+        userId={userId}
+        onClose={() => setShowAddTask(false)}
+        onCreated={() => { setShowAddTask(false); router.refresh(); }}
+      />
+
+      {/* Add event slide panel */}
+      <AddEventPanel
+        open={showAddEvent}
+        projects={projects}
+        eventTypes={eventTypes}
+        roomGroups={roomGroups}
+        groupsByProject={groupsByProject.current}
+        onClose={() => setShowAddEvent(false)}
+        onCreated={() => { setShowAddEvent(false); router.refresh(); }}
+      />
     </div>
   );
 }
