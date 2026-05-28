@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { format, isPast, isToday } from "date-fns";
+import { Plus } from "lucide-react";
 import { TaskDetailPanel } from "@/components/tasks/task-detail-panel";
+import { AddTaskPanel } from "@/components/tasks/add-task-panel";
 
 interface TaskRow {
   id: string;
@@ -51,14 +52,9 @@ export function TasksClient({
   userId: string;
   filter: Filter;
 }) {
-  const router = useRouter();
   const supabase = createClient();
   const [tasks, setTasks] = useState(initialTasks);
-  const [showForm, setShowForm] = useState(false);
-  const [title, setTitle] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [projectId, setProjectId] = useState("");
-  const [assignee, setAssignee] = useState("");
+  const [showAddPanel, setShowAddPanel] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskRow | null>(null);
 
   const FILTERS: { key: Filter; label: string }[] = [
@@ -67,31 +63,6 @@ export function TasksClient({
     { key: "personal", label: "Personal" },
     { key: "completed", label: "Completed" },
   ];
-
-  async function addTask() {
-    if (!title.trim()) return;
-    const isPersonal = !projectId;
-    const { data, error } = await supabase
-      .from("tasks")
-      .insert({
-        title: title.trim(),
-        project_id: projectId || null,
-        room_id: null,
-        assigned_to: isPersonal ? userId : assignee || null,
-        due_date: dueDate || null,
-        created_by: userId,
-      })
-      .select("*, projects(name), rooms(name), assignee:assigned_to(full_name), completer:completed_by(full_name)")
-      .single();
-    if (!error && data) {
-      setTasks([data as TaskRow, ...tasks]);
-      setTitle("");
-      setDueDate("");
-      setProjectId("");
-      setAssignee("");
-      setShowForm(false);
-    }
-  }
 
   async function toggleTask(task: TaskRow) {
     const updates = task.completed_at
@@ -125,14 +96,12 @@ export function TasksClient({
     setSelectedTask(null);
   }
 
+  function handleTaskCreated(task: TaskRow) {
+    setTasks((prev) => [task, ...prev]);
+  }
+
   return (
     <div className="container py-6 md:py-8 px-4">
-      <div className="flex justify-end mb-4">
-        <button onClick={() => setShowForm(!showForm)} className="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90">
-          {showForm ? "Cancel" : "+ Add task"}
-        </button>
-      </div>
-
       {/* Filter tabs */}
       <div className="flex items-center rounded-md border p-0.5 mb-5 overflow-x-auto no-scrollbar">
         {FILTERS.map((f) => (
@@ -147,57 +116,6 @@ export function TasksClient({
           </Link>
         ))}
       </div>
-
-      {/* Add task form */}
-      {showForm && (
-        <div className="rounded-lg border bg-card p-4 mb-5 space-y-3">
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && addTask()}
-            placeholder="What needs to be done?"
-            className="w-full h-9 px-3 text-sm rounded-md border bg-background"
-            autoFocus
-          />
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <select
-              value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
-              className="h-9 px-2 text-sm rounded-md border bg-background"
-            >
-              <option value="">Personal todo</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-            <select
-              value={assignee}
-              onChange={(e) => setAssignee(e.target.value)}
-              className="h-9 px-2 text-sm rounded-md border bg-background"
-              disabled={!projectId}
-            >
-              <option value="">{projectId ? "Unassigned" : "Assigned to you"}</option>
-              {profiles.map((p) => (
-                <option key={p.id} value={p.id}>{p.full_name}</option>
-              ))}
-            </select>
-            <input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              className="h-9 px-2 text-sm rounded-md border bg-background"
-            />
-          </div>
-          <div className="flex justify-end">
-            <button
-              onClick={addTask}
-              className="h-8 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90"
-            >
-              Add task
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Desktop table */}
       <div className="hidden md:block rounded-lg border bg-card overflow-hidden">
@@ -304,6 +222,25 @@ export function TasksClient({
           );
         })}
       </div>
+
+      {/* Floating pill – desktop only */}
+      <button
+        onClick={() => setShowAddPanel(true)}
+        className="hidden md:inline-flex fixed bottom-6 right-6 z-40 items-center gap-2 h-10 pl-4 pr-5 rounded-full bg-primary text-primary-foreground text-sm font-medium shadow-lg hover:opacity-90 transition-opacity"
+      >
+        <Plus size={18} />
+        New task
+      </button>
+
+      {/* Add task slide panel */}
+      <AddTaskPanel
+        open={showAddPanel}
+        projects={projects}
+        profiles={profiles}
+        userId={userId}
+        onClose={() => setShowAddPanel(false)}
+        onCreated={handleTaskCreated}
+      />
 
       {/* Task detail panel */}
       <TaskDetailPanel

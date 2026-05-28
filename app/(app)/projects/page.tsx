@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { format } from "date-fns";
 
@@ -15,10 +16,6 @@ export default async function ProjectsPage() {
 
   return (
     <div className="container py-6 md:py-8 px-4">
-      <div className="flex justify-end mb-6">
-        <Link href="/projects/new" className="h-9 px-4 inline-flex items-center rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90">New project</Link>
-      </div>
-
       {/* Desktop table */}
       <div className="hidden md:block rounded-lg border bg-card overflow-hidden">
         <table className="w-full text-sm">
@@ -91,6 +88,15 @@ export default async function ProjectsPage() {
           );
         })}
       </div>
+
+      {/* Floating pill – desktop only */}
+      <Link
+        href="/projects/new"
+        className="hidden md:inline-flex fixed bottom-6 right-6 z-40 items-center gap-2 h-10 pl-4 pr-5 rounded-full bg-primary text-primary-foreground text-sm font-medium shadow-lg hover:opacity-90 transition-opacity"
+      >
+        <Plus size={18} />
+        New project
+      </Link>
     </div>
   );
 }

@@ -13,6 +13,7 @@ import { Plus, X, CalendarPlus } from "lucide-react";
 import type { Project, Phase, RoomGroup, PhasePlan, CalendarEvent, EventType } from "@/lib/types";
 import { EventDetailPanel } from "@/components/plan/event-detail-panel";
 import { EventsListView } from "@/components/plan/events-list-view";
+import { AddEventPanel } from "@/components/plan/add-event-panel";
 
 interface Props {
   year: number;
@@ -490,7 +491,8 @@ function CalendarView({
   onEventDeleted: (id: string) => void;
 }) {
   const todayMonthRef = useRef<HTMLDivElement>(null);
-  const [quickAdd, setQuickAdd] = useState<{ date: string } | null>(null);
+  const [addEventDate, setAddEventDate] = useState<string | undefined>(undefined);
+  const [showAddEvent, setShowAddEvent] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const months = eachMonthOfInterval({
     start: new Date(year, 0, 1),
@@ -531,32 +533,13 @@ function CalendarView({
     return m;
   }, [events]);
 
+  function openAddEvent(date?: string) {
+    setAddEventDate(date);
+    setShowAddEvent(true);
+  }
+
   return (
     <div className="space-y-4">
-      {/* Quick add bar */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => setQuickAdd({ date: format(today, "yyyy-MM-dd") })}
-          className="h-8 px-3 inline-flex items-center gap-1.5 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90"
-        >
-          <CalendarPlus size={14} />
-          Add event
-        </button>
-      </div>
-
-      {/* Quick-add modal */}
-      {quickAdd && (
-        <QuickAddEvent
-          date={quickAdd.date}
-          projects={projects}
-          eventTypes={eventTypes}
-          roomGroups={roomGroups}
-          groupsByProject={groupsByProject}
-          onClose={() => setQuickAdd(null)}
-          onAdded={(e) => { onEventAdded(e); setQuickAdd(null); }}
-        />
-      )}
-
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {months.map((m, i) => (
           <MonthCard
@@ -568,12 +551,33 @@ function CalendarView({
             eventTypeMap={eventTypeMap}
             phaseMap={phaseMap}
             isCurrentMonth={i === todayMonthIndex}
-            onDayClick={(date) => setQuickAdd({ date })}
+            onDayClick={(date) => openAddEvent(date)}
             onEventClick={(ev) => setSelectedEvent(ev)}
             onDeleteEvent={onEventDeleted}
           />
         ))}
       </div>
+
+      {/* Floating pill – desktop only */}
+      <button
+        onClick={() => openAddEvent()}
+        className="hidden md:inline-flex fixed bottom-6 right-6 z-40 items-center gap-2 h-10 pl-4 pr-5 rounded-full bg-primary text-primary-foreground text-sm font-medium shadow-lg hover:opacity-90 transition-opacity"
+      >
+        <CalendarPlus size={18} />
+        New event
+      </button>
+
+      {/* Add event slide panel */}
+      <AddEventPanel
+        open={showAddEvent}
+        date={addEventDate}
+        projects={projects}
+        eventTypes={eventTypes}
+        roomGroups={roomGroups}
+        groupsByProject={groupsByProject}
+        onClose={() => setShowAddEvent(false)}
+        onCreated={(e) => onEventAdded(e)}
+      />
 
       {/* Event detail panel */}
       <EventDetailPanel
@@ -592,155 +596,6 @@ function CalendarView({
           setSelectedEvent(null);
         }}
       />
-    </div>
-  );
-}
-
-/* ── Quick-add event form ── */
-
-function QuickAddEvent({
-  date, projects, eventTypes, roomGroups, groupsByProject, onClose, onAdded,
-}: {
-  date: string;
-  projects: Project[];
-  eventTypes: EventType[];
-  roomGroups: RoomGroup[];
-  groupsByProject: Map<string, RoomGroup[]>;
-  onClose: () => void;
-  onAdded: (e: CalendarEvent) => void;
-}) {
-  const supabase = createClient();
-  const [title, setTitle] = useState("");
-  const [eventDate, setEventDate] = useState(date);
-  const [typeId, setTypeId] = useState("");
-  const [projectId, setProjectId] = useState("");
-  const [groupId, setGroupId] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  const availableGroups = projectId ? (groupsByProject.get(projectId) || []) : [];
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!title.trim() || !eventDate) return;
-    setSaving(true);
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setSaving(false); return; }
-    const { data, error } = await supabase
-      .from("calendar_events")
-      .insert({
-        title: title.trim(),
-        event_date: eventDate,
-        event_type_id: typeId || null,
-        project_id: projectId || null,
-        room_group_id: groupId || null,
-        created_by: user.id,
-      })
-      .select("*")
-      .single();
-
-    if (!error && data) {
-      onAdded(data as CalendarEvent);
-    }
-    setSaving(false);
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-card border rounded-lg shadow-lg w-full max-w-md mx-4 p-5 space-y-4"
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="font-medium text-sm">New event</h3>
-          <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X size={16} />
-          </button>
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium mb-1">Title</label>
-          <input
-            autoFocus
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full h-9 px-3 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            placeholder="e.g. Template day, Worktop install"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium mb-1">Date</label>
-            <input
-              type="date"
-              value={eventDate}
-              onChange={(e) => setEventDate(e.target.value)}
-              className="w-full h-9 px-3 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1">Type</label>
-            <select
-              value={typeId}
-              onChange={(e) => setTypeId(e.target.value)}
-              className="w-full h-9 px-2 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="">None</option>
-              {eventTypes.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium mb-1">Project</label>
-            <select
-              value={projectId}
-              onChange={(e) => { setProjectId(e.target.value); setGroupId(""); }}
-              className="w-full h-9 px-2 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="">None</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1">Room group</label>
-            <select
-              value={groupId}
-              onChange={(e) => setGroupId(e.target.value)}
-              disabled={!projectId || availableGroups.length === 0}
-              className="w-full h-9 px-2 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
-            >
-              <option value="">None</option>
-              {availableGroups.map((g) => (
-                <option key={g.id} value={g.id}>{g.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-2 pt-1">
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-9 px-4 rounded-md border text-sm hover:bg-muted"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={saving || !title.trim() || !eventDate}
-            className="h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50"
-          >
-            {saving ? "Adding..." : "Add event"}
-          </button>
-        </div>
-      </form>
     </div>
   );
 }
