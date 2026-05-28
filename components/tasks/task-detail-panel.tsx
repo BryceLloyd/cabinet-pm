@@ -10,6 +10,7 @@ interface TaskRow {
   title: string;
   description: string | null;
   due_date: string | null;
+  priority: number;
   project_id: string | null;
   room_id: string | null;
   assigned_to: string | null;

@@ -5,10 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { format, isPast, isToday } from "date-fns";
+import { TaskDetailPanel } from "@/components/tasks/task-detail-panel";
 
 interface TaskRow {
   id: string;
   title: string;
+  description: string | null;
   due_date: string | null;
   priority: number;
   project_id: string | null;
@@ -17,6 +19,7 @@ interface TaskRow {
   completed_at: string | null;
   completed_by: string | null;
   created_by: string;
+  created_at: string;
   projects: { name: string } | null;
   rooms: { name: string } | null;
   assignee: { full_name: string } | null;
@@ -56,6 +59,7 @@ export function TasksClient({
   const [dueDate, setDueDate] = useState("");
   const [projectId, setProjectId] = useState("");
   const [assignee, setAssignee] = useState("");
+  const [selectedTask, setSelectedTask] = useState<TaskRow | null>(null);
 
   const FILTERS: { key: Filter; label: string }[] = [
     { key: "mine", label: "My tasks" },
@@ -109,6 +113,16 @@ export function TasksClient({
         setTasks(tasks.map((t) => (t.id === task.id ? { ...t, ...updates } as TaskRow : t)));
       }
     }
+  }
+
+  function handleTaskUpdated(updated: TaskRow) {
+    setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+    setSelectedTask(updated);
+  }
+
+  function handleTaskDeleted(id: string) {
+    setTasks((prev) => prev.filter((t) => t.id !== id));
+    setSelectedTask(null);
   }
 
   return (
@@ -208,12 +222,17 @@ export function TasksClient({
             {tasks.map((t) => {
               const overdue = !t.completed_at && t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date));
               return (
-                <tr key={t.id} className={`hover:bg-muted/30 ${t.completed_at ? "opacity-50" : ""}`}>
+                <tr
+                  key={t.id}
+                  className={`hover:bg-muted/30 cursor-pointer ${t.completed_at ? "opacity-50" : ""}`}
+                  onClick={() => setSelectedTask(t)}
+                >
                   <td className="px-4 py-3">
                     <input
                       type="checkbox"
                       checked={!!t.completed_at}
                       onChange={() => toggleTask(t)}
+                      onClick={(e) => e.stopPropagation()}
                       className="size-4 rounded border-input cursor-pointer"
                     />
                   </td>
@@ -224,7 +243,7 @@ export function TasksClient({
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {t.projects ? (
-                      <Link href={`/projects/${t.project_id}`} className="hover:underline">{t.projects.name}</Link>
+                      <Link href={`/projects/${t.project_id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>{t.projects.name}</Link>
                     ) : (
                       <span className="italic">Personal</span>
                     )}
@@ -251,11 +270,16 @@ export function TasksClient({
         {tasks.map((t) => {
           const overdue = !t.completed_at && t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date));
           return (
-            <div key={t.id} className={`rounded-lg border bg-card p-3 flex items-start gap-3 ${t.completed_at ? "opacity-50" : ""}`}>
+            <div
+              key={t.id}
+              className={`rounded-lg border bg-card p-3 flex items-start gap-3 cursor-pointer ${t.completed_at ? "opacity-50" : ""}`}
+              onClick={() => setSelectedTask(t)}
+            >
               <input
                 type="checkbox"
                 checked={!!t.completed_at}
                 onChange={() => toggleTask(t)}
+                onClick={(e) => e.stopPropagation()}
                 className="mt-0.5 size-4 rounded border-input cursor-pointer shrink-0"
               />
               <div className="flex-1 min-w-0">
@@ -264,7 +288,7 @@ export function TasksClient({
                 </div>
                 <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-2">
                   {t.projects ? (
-                    <Link href={`/projects/${t.project_id}`} className="hover:underline">{t.projects.name}</Link>
+                    <Link href={`/projects/${t.project_id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>{t.projects.name}</Link>
                   ) : (
                     <span className="italic">Personal</span>
                   )}
@@ -280,6 +304,17 @@ export function TasksClient({
           );
         })}
       </div>
+
+      {/* Task detail panel */}
+      <TaskDetailPanel
+        task={selectedTask}
+        profiles={profiles}
+        userId={userId}
+        onClose={() => setSelectedTask(null)}
+        onUpdated={handleTaskUpdated}
+        onDeleted={handleTaskDeleted}
+        onToggleComplete={(t) => { toggleTask(t); }}
+      />
     </div>
   );
 }
