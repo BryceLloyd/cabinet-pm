@@ -18,7 +18,7 @@ export default async function TasksPage({
 
   let query = supabase
     .from("tasks")
-    .select("*, projects(name), rooms(name), assignee:assigned_to(full_name), completer:completed_by(full_name)");
+    .select("*, projects(name), rooms(name), room_groups(name), assignee:assigned_to(full_name), completer:completed_by(full_name)");
 
   if (filter === "mine") {
     query = query.eq("assigned_to", user!.id).is("completed_at", null)

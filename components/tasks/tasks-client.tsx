@@ -16,6 +16,7 @@ interface TaskRow {
   priority: number;
   project_id: string | null;
   room_id: string | null;
+  room_group_id: string | null;
   assigned_to: string | null;
   completed_at: string | null;
   completed_by: string | null;
@@ -23,6 +24,7 @@ interface TaskRow {
   created_at: string;
   projects: { name: string } | null;
   rooms: { name: string } | null;
+  room_groups: { name: string } | null;
   assignee: { full_name: string } | null;
   completer: { full_name: string } | null;
 }
@@ -77,7 +79,7 @@ export function TasksClient({
       .from("tasks")
       .update(updates)
       .eq("id", task.id)
-      .select("*, projects(name), rooms(name), assignee:assigned_to(full_name), completer:completed_by(full_name)")
+      .select("*, projects(name), rooms(name), room_groups(name), assignee:assigned_to(full_name), completer:completed_by(full_name)")
       .single();
     if (!error && data) {
       const updated = data as TaskRow;
@@ -165,6 +167,7 @@ export function TasksClient({
                     ) : (
                       <span className="italic">Personal</span>
                     )}
+                    {t.room_groups && <span> · {t.room_groups.name}</span>}
                     {t.rooms && <span> · {t.rooms.name}</span>}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{t.assignee?.full_name || "—"}</td>
@@ -200,7 +203,11 @@ export function TasksClient({
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-2">
                     {t.projects ? (
-                      <Link href={`/projects/${t.project_id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>{t.projects.name}</Link>
+                      <>
+                        <Link href={`/projects/${t.project_id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>{t.projects.name}</Link>
+                        {t.room_groups && <span>· {t.room_groups.name}</span>}
+                        {t.rooms && <span>· {t.rooms.name}</span>}
+                      </>
                     ) : (
                       <span className="italic">Personal</span>
                     )}

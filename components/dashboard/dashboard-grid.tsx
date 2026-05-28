@@ -159,13 +159,14 @@ export function DashboardGrid({ userId }: { userId: string }) {
   const handleTaskClick = useCallback(async (taskId: string) => {
     const { data } = await supabase
       .from("tasks")
-      .select("id, title, description, due_date, priority, project_id, room_id, assigned_to, completed_at, completed_by, created_by, created_at, projects(name), rooms(name), assignee:profiles!tasks_assigned_to_fkey(full_name), completer:profiles!tasks_completed_by_fkey(full_name)")
+      .select("id, title, description, due_date, priority, project_id, room_id, room_group_id, assigned_to, completed_at, completed_by, created_by, created_at, projects(name), rooms(name), room_groups(name), assignee:profiles!tasks_assigned_to_fkey(full_name), completer:profiles!tasks_completed_by_fkey(full_name)")
       .eq("id", taskId)
       .single();
     if (data) {
       const row = data as Record<string, unknown>;
       if (Array.isArray(row.projects)) row.projects = row.projects[0] || null;
       if (Array.isArray(row.rooms)) row.rooms = row.rooms[0] || null;
+      if (Array.isArray(row.room_groups)) row.room_groups = row.room_groups[0] || null;
       if (Array.isArray(row.assignee)) row.assignee = row.assignee[0] || null;
       if (Array.isArray(row.completer)) row.completer = row.completer[0] || null;
       setSelectedTask(row);
