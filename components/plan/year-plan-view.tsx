@@ -11,6 +11,7 @@ import {
 } from "date-fns";
 import { Plus, X, CalendarPlus } from "lucide-react";
 import type { Project, Phase, RoomGroup, PhasePlan, CalendarEvent, EventType } from "@/lib/types";
+import { EventDetailPanel } from "@/components/plan/event-detail-panel";
 
 interface Props {
   year: number;
@@ -139,6 +140,7 @@ export function YearPlanView({ year, initialView, projects, phases, roomGroups, 
           events={events} eventTypeMap={eventTypeMap} eventTypes={eventTypes}
           roomGroups={roomGroups} groupsByProject={groupsByProject}
           onEventAdded={(e) => setEvents((prev) => [...prev, e])}
+          onEventUpdated={(updated) => setEvents((prev) => prev.map((e) => e.id === updated.id ? updated : e))}
           onEventDeleted={(id) => setEvents((prev) => prev.filter((e) => e.id !== id))} />
       )}
     </div>
@@ -461,16 +463,18 @@ function GanttView({
 function CalendarView({
   year, projects, phaseMap, scrollTrigger,
   events, eventTypeMap, eventTypes, roomGroups, groupsByProject,
-  onEventAdded, onEventDeleted,
+  onEventAdded, onEventUpdated, onEventDeleted,
 }: {
   year: number; projects: Project[]; phaseMap: Map<string, Phase>; scrollTrigger: number;
   events: CalendarEvent[]; eventTypeMap: Map<string, EventType>; eventTypes: EventType[];
   roomGroups: RoomGroup[]; groupsByProject: Map<string, RoomGroup[]>;
   onEventAdded: (e: CalendarEvent) => void;
+  onEventUpdated: (e: CalendarEvent) => void;
   onEventDeleted: (id: string) => void;
 }) {
   const todayMonthRef = useRef<HTMLDivElement>(null);
   const [quickAdd, setQuickAdd] = useState<{ date: string } | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const months = eachMonthOfInterval({
     start: new Date(year, 0, 1),
     end: new Date(year, 11, 1),
@@ -548,10 +552,29 @@ function CalendarView({
             phaseMap={phaseMap}
             isCurrentMonth={i === todayMonthIndex}
             onDayClick={(date) => setQuickAdd({ date })}
+            onEventClick={(ev) => setSelectedEvent(ev)}
             onDeleteEvent={onEventDeleted}
           />
         ))}
       </div>
+
+      {/* Event detail panel */}
+      <EventDetailPanel
+        event={selectedEvent}
+        eventTypes={eventTypes}
+        projects={projects}
+        roomGroups={roomGroups}
+        groupsByProject={groupsByProject}
+        onClose={() => setSelectedEvent(null)}
+        onUpdated={(updated) => {
+          onEventUpdated(updated);
+          setSelectedEvent(updated);
+        }}
+        onDeleted={(id) => {
+          onEventDeleted(id);
+          setSelectedEvent(null);
+        }}
+      />
     </div>
   );
 }
@@ -715,8 +738,9 @@ const MonthCard = forwardRef<HTMLDivElement, {
   phaseMap: Map<string, Phase>;
   isCurrentMonth?: boolean;
   onDayClick: (date: string) => void;
+  onEventClick: (event: CalendarEvent) => void;
   onDeleteEvent: (id: string) => void;
-}>(function MonthCard({ month, byDate, eventsByDate, eventTypeMap, phaseMap, isCurrentMonth, onDayClick, onDeleteEvent }, ref) {
+}>(function MonthCard({ month, byDate, eventsByDate, eventTypeMap, phaseMap, isCurrentMonth, onDayClick, onEventClick, onDeleteEvent }, ref) {
   const supabase = createClient();
   const monthStart = startOfMonth(month);
   const monthEnd = endOfMonth(month);
@@ -799,9 +823,10 @@ const MonthCard = forwardRef<HTMLDivElement, {
                 return (
                   <div
                     key={ev.id}
-                    className="mt-0.5 truncate rounded px-1 py-0.5 text-[10px] flex items-center gap-0.5 group/ev"
+                    className="mt-0.5 truncate rounded px-1 py-0.5 text-[10px] flex items-center gap-0.5 group/ev cursor-pointer hover:opacity-80"
                     style={{ backgroundColor: `${color}20`, color }}
                     title={`${ev.title}${et ? ` (${et.name})` : ""}`}
+                    onClick={(e) => { e.stopPropagation(); onEventClick(ev); }}
                   >
                     <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
                     <span className="truncate">{ev.title}</span>
