@@ -11,7 +11,7 @@ export default async function PlanPage({
 }) {
   const params = await searchParams;
   const year = params.year ? parseInt(params.year, 10) : new Date().getFullYear();
-  const view = (params.view === "calendar" ? "calendar" : "gantt") as "gantt" | "calendar";
+  const view = (["calendar", "events"].includes(params.view || "") ? params.view : "gantt") as "gantt" | "calendar" | "events";
 
   const supabase = await createClient();
   const yearStart = `${year}-01-01`;
