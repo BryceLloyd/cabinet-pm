@@ -11,8 +11,11 @@ export const metadata: Metadata = {
     title: "Cabinet PM",
   },
   icons: {
-    icon: "/icon.svg",
-    apple: "/icon.svg",
+    icon: [
+      { url: "/api/logo", type: "image/png" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/api/logo",
   },
 };
 
