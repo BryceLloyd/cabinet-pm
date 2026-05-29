@@ -4,6 +4,7 @@
 - Next.js 15 App Router, React 19, TypeScript strict, Tailwind CSS
 - Supabase (Postgres + Auth + RLS), `@supabase/ssr` for cookie-based auth
 - date-fns for all date logic
+- `web-push` for VAPID-based push notifications
 - Deployed to Vercel at cabinet-pm.vercel.app
 - Type check: `npx tsc --noEmit`
 
@@ -34,7 +35,10 @@
 - **Gantt phase overlay**: Both project detail and year plan Gantt charts show a thin colored phase strip over the grey lead time bar. Year plan uses SVG `<rect>` elements; project detail uses CSS flex with `dp.days` as flex values.
 - **Mobile list density**: Mobile card lists use compact spacing (px-3 py-2 cards, space-y-1.5 gaps) across tasks, projects, and events pages to fit more items per screen.
 - **Mobile FAB drawer**: `max-h-[85vh] flex flex-col` with `overflow-y-auto` on the content div so long forms (like add-task with all fields) scroll within the drawer.
-- **PWA / App icon**: Service worker at `public/sw.js` (registered in root layout) enables Chrome PWA install. Icons: `favicon.ico` (BMP-based, 16/32/48px), PNG icons at 48/192/512px, maskable icons at 192/512px, apple-touch-icon at 180px. Manifest in `public/manifest.json`.
+- **PWA / App icon**: Service worker at `public/sw.js` (registered in root layout) enables Chrome PWA install + push notification handling. Icons: `favicon.ico` (BMP-based, 16/32/48px), PNG icons at 48/192/512px, maskable icons at 192/512px, apple-touch-icon at 180px. Manifest in `public/manifest.json`.
+- **Notifications system**: 4 types: `task_assigned`, `task_due_today`, `phase_changed`, `event_reminder`. DB triggers auto-create rows for task_assigned and phase_changed. Vercel cron (`/api/cron/notifications`) handles due-today and event-reminder daily. Supabase database webhook on `notifications` INSERT calls `/api/push/send` to deliver web push. Bell component (`notification-bell.tsx`) uses Supabase Realtime for live unread badge.
+- **Push subscriptions**: `push_subscriptions` table stores browser push endpoints per user. Subscribe/unsubscribe via `/api/push/subscribe` and `/api/push/unsubscribe`. VAPID keys in env vars. Service worker handles push display and notification click navigation.
+- **Notification preferences**: Stored in `profiles.notification_preferences` JSONB column. Grouped toggles (Tasks/Pipeline/Calendar) in settings. 800ms debounce auto-save. Push permission banner shows when browser permission not yet granted.
 - **Middleware static file exclusions**: `middleware.ts` matcher must exclude static assets (`sw.js`, `favicon.*`, `icon.*`, `apple-touch-icon.png`, `manifest.json`) or auth redirects break PWA install and icon loading.
 - **Stale `.next` cache**: If runtime errors reference missing chunk files (e.g. `Cannot find module './543.js'`), delete `.next/` and restart.
 - **Port conflicts**: Kill all node processes before restarting dev server: `Stop-Process -Name "node" -Force` in PowerShell.
