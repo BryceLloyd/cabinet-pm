@@ -83,10 +83,10 @@ function MobileTaskCard({ t, onClick }: { t: TaskRow; onClick: () => void }) {
   const overdue = !t.completed_at && t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date));
   return (
     <div
-      className={`rounded-lg border bg-card p-3 cursor-pointer ${t.completed_at ? "opacity-50" : ""}`}
+      className={`rounded-lg border bg-card px-3 py-2 cursor-pointer ${t.completed_at ? "opacity-50" : ""}`}
       onClick={onClick}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">
           <div className={`text-sm ${t.completed_at ? "line-through text-muted-foreground" : "font-medium"}`}>
             {t.title}
@@ -268,17 +268,17 @@ export function TasksClient({
           </div>
 
           {/* Mobile grouped */}
-          <div className="md:hidden space-y-4">
+          <div className="md:hidden space-y-3">
             {groupedByType!.map((group) => (
               <div key={group.key}>
-                <div className="flex items-center gap-2 mb-2 px-1">
+                <div className="flex items-center gap-2 mb-1.5 px-1">
                   {group.color && (
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: group.color }} />
                   )}
                   <span className="text-sm font-medium">{group.label}</span>
                   <span className="text-xs text-muted-foreground">{group.tasks.length}</span>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {group.tasks.map((t) => (
                     <MobileTaskCard key={t.id} t={t} onClick={() => setSelectedTask(t)} />
                   ))}
@@ -355,7 +355,7 @@ export function TasksClient({
           </div>
 
           {/* Mobile flat list */}
-          <div className="md:hidden space-y-2">
+          <div className="md:hidden space-y-1.5">
             {tasks.length === 0 && (
               <div className="rounded-lg border bg-card px-4 py-12 text-center text-sm text-muted-foreground">
                 No tasks.
@@ -366,10 +366,10 @@ export function TasksClient({
               return (
                 <div
                   key={t.id}
-                  className={`rounded-lg border bg-card p-3 cursor-pointer ${t.completed_at ? "opacity-50" : ""}`}
+                  className={`rounded-lg border bg-card px-3 py-2 cursor-pointer ${t.completed_at ? "opacity-50" : ""}`}
                   onClick={() => setSelectedTask(t)}
                 >
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-2">
                     <div className="flex-1 min-w-0">
                       <div className={`text-sm ${t.completed_at ? "line-through text-muted-foreground" : "font-medium"}`}>
                         {t.title}
