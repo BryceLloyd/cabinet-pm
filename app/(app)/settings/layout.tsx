@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, Building2, Users, Layers, CalendarDays, ChevronLeft } from "lucide-react";
+import { User, Building2, Users, Layers, CalendarDays, ChevronLeft, Bell } from "lucide-react";
 
 const SETTINGS_NAV = [
   { href: "/settings/profile", label: "Profile", icon: User },
+  { href: "/settings/notifications", label: "Notifications", icon: Bell },
   { href: "/settings/business", label: "Business", icon: Building2 },
   { href: "/settings/team", label: "Team", icon: Users },
   { href: "/settings/phases", label: "Phases", icon: Layers },
