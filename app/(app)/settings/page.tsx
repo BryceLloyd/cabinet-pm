@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { User, Building2, Users, Layers, CalendarDays, Tag, ChevronRight } from "lucide-react";
+import { User, Bell, Building2, Users, Layers, CalendarDays, Tag, ChevronRight } from "lucide-react";
 import { SettingsDesktopRedirect } from "./desktop-redirect";
 
 const SETTINGS_SECTIONS = [
   { href: "/settings/profile", label: "Profile", description: "Name, avatar, appearance", icon: User },
+  { href: "/settings/notifications", label: "Notifications", description: "Push and in-app alerts", icon: Bell },
   { href: "/settings/business", label: "Business", description: "Company info and branding", icon: Building2 },
   { href: "/settings/team", label: "Team", description: "Members and permissions", icon: Users },
   { href: "/settings/phases", label: "Phases", description: "Project phase pipeline", icon: Layers },
