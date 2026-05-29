@@ -135,3 +135,11 @@ export interface CalendarEvent {
   created_at: string;
   updated_at: string;
 }
+
+export type {
+  NotificationType,
+  Notification,
+  PushSubscriptionRecord,
+  NotificationPreferences,
+} from "./types/notifications";
+export { DEFAULT_NOTIFICATION_PREFERENCES } from "./types/notifications";
