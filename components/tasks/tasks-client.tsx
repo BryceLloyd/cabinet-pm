@@ -17,6 +17,7 @@ interface TaskRow {
   project_id: string | null;
   room_id: string | null;
   room_group_id: string | null;
+  task_type_id: string | null;
   assigned_to: string | null;
   completed_at: string | null;
   completed_by: string | null;
@@ -25,6 +26,7 @@ interface TaskRow {
   projects: { name: string } | null;
   rooms: { name: string } | null;
   room_groups: { name: string } | null;
+  task_types: { id: string; name: string; color: string } | null;
   assignee: { full_name: string } | null;
   completer: { full_name: string } | null;
 }
@@ -39,18 +41,26 @@ interface ProfileOption {
   full_name: string;
 }
 
+interface TaskTypeOption {
+  id: string;
+  name: string;
+  color: string;
+}
+
 type Filter = "mine" | "all" | "personal" | "completed";
 
 export function TasksClient({
   initialTasks,
   projects,
   profiles,
+  taskTypes,
   userId,
   filter,
 }: {
   initialTasks: TaskRow[];
   projects: ProjectOption[];
   profiles: ProfileOption[];
+  taskTypes: TaskTypeOption[];
   userId: string;
   filter: Filter;
 }) {
@@ -59,6 +69,8 @@ export function TasksClient({
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskRow | null>(null);
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const selectStr = "*, projects(name), rooms(name), room_groups(name), task_types(id,name,color), assignee:assigned_to(full_name), completer:completed_by(full_name)";
 
   useEffect(() => {
     return () => { if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current); };
@@ -79,15 +91,13 @@ export function TasksClient({
       .from("tasks")
       .update(updates)
       .eq("id", task.id)
-      .select("*, projects(name), rooms(name), room_groups(name), assignee:assigned_to(full_name), completer:completed_by(full_name)")
+      .select(selectStr)
       .single();
     if (!error && data) {
       const updated = data as TaskRow;
       if (filter === "completed" && task.completed_at) {
-        // Uncompleting from completed view: remove from list
         setTasks((prev) => prev.filter((t) => t.id !== task.id));
       } else if (!task.completed_at && filter !== "completed") {
-        // Completing from open views: show strikethrough then remove
         setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)));
         if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
         fadeTimerRef.current = setTimeout(() => setTasks((prev) => prev.filter((t) => t.id !== task.id)), 600);
@@ -135,6 +145,7 @@ export function TasksClient({
           <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="text-left font-medium px-4 py-2.5">Task</th>
+              <th className="text-left font-medium px-4 py-2.5">Type</th>
               <th className="text-left font-medium px-4 py-2.5">Project / Room</th>
               <th className="text-left font-medium px-4 py-2.5">Assignee</th>
               <th className="text-left font-medium px-4 py-2.5">Due</th>
@@ -143,7 +154,7 @@ export function TasksClient({
           <tbody className="divide-y">
             {tasks.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">
+                <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
                   No tasks. {filter === "mine" ? "You're all clear." : ""}
                 </td>
               </tr>
@@ -160,6 +171,18 @@ export function TasksClient({
                     <div className={t.completed_at ? "line-through text-muted-foreground" : "font-medium"}>
                       {t.title}
                     </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    {t.task_types ? (
+                      <span
+                        className="inline-flex items-center text-xs px-1.5 py-0.5 rounded font-medium"
+                        style={{ backgroundColor: `${t.task_types.color}20`, color: t.task_types.color }}
+                      >
+                        {t.task_types.name}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {t.projects ? (
@@ -201,7 +224,15 @@ export function TasksClient({
                   <div className={`text-sm ${t.completed_at ? "line-through text-muted-foreground" : "font-medium"}`}>
                     {t.title}
                   </div>
-                  <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-2">
+                  <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2">
+                    {t.task_types && (
+                      <span
+                        className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded font-medium"
+                        style={{ backgroundColor: `${t.task_types.color}20`, color: t.task_types.color }}
+                      >
+                        {t.task_types.name}
+                      </span>
+                    )}
                     {t.projects ? (
                       <>
                         <Link href={`/projects/${t.project_id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>{t.projects.name}</Link>
@@ -239,6 +270,7 @@ export function TasksClient({
         open={showAddPanel}
         projects={projects}
         profiles={profiles}
+        taskTypes={taskTypes}
         userId={userId}
         onClose={() => setShowAddPanel(false)}
         onCreated={handleTaskCreated}
@@ -248,6 +280,7 @@ export function TasksClient({
       <TaskDetailPanel
         task={selectedTask}
         profiles={profiles}
+        taskTypes={taskTypes}
         userId={userId}
         onClose={() => setSelectedTask(null)}
         onUpdated={handleTaskUpdated}

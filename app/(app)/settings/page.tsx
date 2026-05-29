@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { User, Building2, Users, Layers, CalendarDays, ChevronRight } from "lucide-react";
+import { User, Building2, Users, Layers, CalendarDays, Tag, ChevronRight } from "lucide-react";
 import { SettingsDesktopRedirect } from "./desktop-redirect";
 
 const SETTINGS_SECTIONS = [
@@ -8,6 +8,7 @@ const SETTINGS_SECTIONS = [
   { href: "/settings/team", label: "Team", description: "Members and permissions", icon: Users },
   { href: "/settings/phases", label: "Phases", description: "Project phase pipeline", icon: Layers },
   { href: "/settings/event-types", label: "Event types", description: "Calendar event categories", icon: CalendarDays },
+  { href: "/settings/task-types", label: "Task types", description: "Task categories", icon: Tag },
 ] as const;
 
 export default function SettingsIndexPage() {
@@ -20,7 +21,7 @@ export default function SettingsIndexPage() {
           return (
             <Link
               key={section.href}
-              href={section.href}
+              href={section.href as any}
               className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 hover:bg-muted transition-colors"
             >
               <Icon size={18} className="text-muted-foreground shrink-0" />

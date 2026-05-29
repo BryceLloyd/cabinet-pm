@@ -14,6 +14,7 @@ interface TaskRow {
   project_id: string | null;
   room_id: string | null;
   room_group_id: string | null;
+  task_type_id: string | null;
   assigned_to: string | null;
   completed_at: string | null;
   completed_by: string | null;
@@ -22,6 +23,7 @@ interface TaskRow {
   projects: { name: string } | null;
   rooms: { name: string } | null;
   room_groups: { name: string } | null;
+  task_types: { id: string; name: string; color: string } | null;
   assignee: { full_name: string } | null;
   completer: { full_name: string } | null;
 }
@@ -31,9 +33,16 @@ interface ProfileOption {
   full_name: string;
 }
 
+interface TaskTypeOption {
+  id: string;
+  name: string;
+  color: string;
+}
+
 interface TaskDetailPanelProps {
   task: TaskRow | null;
   profiles: ProfileOption[];
+  taskTypes: TaskTypeOption[];
   userId: string;
   onClose: () => void;
   onUpdated: (task: TaskRow) => void;
@@ -42,7 +51,7 @@ interface TaskDetailPanelProps {
 }
 
 export function TaskDetailPanel({
-  task, profiles, userId, onClose, onUpdated, onDeleted, onToggleComplete,
+  task, profiles, taskTypes, userId, onClose, onUpdated, onDeleted, onToggleComplete,
 }: TaskDetailPanelProps) {
   const supabase = createClient();
   const [title, setTitle] = useState("");
@@ -51,6 +60,7 @@ export function TaskDetailPanel({
   const [assignedTo, setAssignedTo] = useState("");
   const [roomGroupId, setRoomGroupId] = useState("");
   const [roomId, setRoomId] = useState("");
+  const [taskTypeId, setTaskTypeId] = useState("");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [roomGroups, setRoomGroups] = useState<{ id: string; name: string }[]>([]);
@@ -65,6 +75,7 @@ export function TaskDetailPanel({
     setAssignedTo(task.assigned_to || "");
     setRoomGroupId(task.room_group_id || "");
     setRoomId(task.room_id || "");
+    setTaskTypeId(task.task_type_id || "");
   }, [task?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load room groups and rooms when task has a project
@@ -87,7 +98,7 @@ export function TaskDetailPanel({
     ? rooms.filter((r) => r.room_group_id === roomGroupId)
     : rooms;
 
-  const selectStr = "*, projects(name), rooms(name), room_groups(name), assignee:assigned_to(full_name), completer:completed_by(full_name)";
+  const selectStr = "*, projects(name), rooms(name), room_groups(name), task_types(id,name,color), assignee:assigned_to(full_name), completer:completed_by(full_name)";
 
   // Auto-save with 800ms debounce
   const autoSave = useCallback(
@@ -178,6 +189,28 @@ export function TaskDetailPanel({
         >
           Complete
         </button>
+      )}
+
+      {/* Task type */}
+      {taskTypes.length > 0 && (
+        <div className="mb-4">
+          <label className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+            Type
+          </label>
+          <select
+            value={taskTypeId}
+            onChange={(e) => {
+              setTaskTypeId(e.target.value);
+              autoSave("task_type_id", e.target.value);
+            }}
+            className="w-full h-9 px-2 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">No type</option>
+            {taskTypes.map((tt) => (
+              <option key={tt.id} value={tt.id}>{tt.name}</option>
+            ))}
+          </select>
+        </div>
       )}
 
       {/* Due date */}

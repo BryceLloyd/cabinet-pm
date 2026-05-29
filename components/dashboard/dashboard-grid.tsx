@@ -120,6 +120,7 @@ export function DashboardGrid({ userId }: { userId: string }) {
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
   const [profiles, setProfiles] = useState<{ id: string; full_name: string }[]>([]);
   const [eventTypes, setEventTypes] = useState<{ id: string; name: string; color: string; archived_at: string | null }[]>([]);
+  const [taskTypes, setTaskTypes] = useState<{ id: string; name: string; color: string }[]>([]);
   const [roomGroups, setRoomGroups] = useState<{ id: string; name: string; project_id: string }[]>([]);
   const [dataLoaded, setDataLoaded] = useState(false);
 
@@ -137,11 +138,13 @@ export function DashboardGrid({ userId }: { userId: string }) {
       supabase.from("projects").select("id, name").in("status", ["planning", "active"]).order("name"),
       supabase.from("profiles").select("id, full_name").is("deactivated_at", null).order("full_name"),
       supabase.from("event_types").select("id, name, color, archived_at").order("sort_order"),
+      supabase.from("task_types").select("id, name, color").is("archived_at", null).order("sort_order"),
       supabase.from("room_groups").select("id, name, project_id").order("sort_order"),
-    ]).then(([{ data: p }, { data: pr }, { data: et }, { data: rg }]) => {
+    ]).then(([{ data: p }, { data: pr }, { data: et }, { data: tt }, { data: rg }]) => {
       setProjects(p || []);
       setProfiles(pr || []);
       setEventTypes(et || []);
+      setTaskTypes(tt || []);
       const groups = rg || [];
       setRoomGroups(groups);
       const map = new Map<string, typeof groups>();
@@ -159,7 +162,7 @@ export function DashboardGrid({ userId }: { userId: string }) {
   const handleTaskClick = useCallback(async (taskId: string) => {
     const { data } = await supabase
       .from("tasks")
-      .select("id, title, description, due_date, priority, project_id, room_id, room_group_id, assigned_to, completed_at, completed_by, created_by, created_at, projects(name), rooms(name), room_groups(name), assignee:profiles!tasks_assigned_to_fkey(full_name), completer:profiles!tasks_completed_by_fkey(full_name)")
+      .select("id, title, description, due_date, priority, project_id, room_id, room_group_id, task_type_id, assigned_to, completed_at, completed_by, created_by, created_at, projects(name), rooms(name), room_groups(name), task_types(id,name,color), assignee:profiles!tasks_assigned_to_fkey(full_name), completer:profiles!tasks_completed_by_fkey(full_name)")
       .eq("id", taskId)
       .single();
     if (data) {
@@ -167,6 +170,7 @@ export function DashboardGrid({ userId }: { userId: string }) {
       if (Array.isArray(row.projects)) row.projects = row.projects[0] || null;
       if (Array.isArray(row.rooms)) row.rooms = row.rooms[0] || null;
       if (Array.isArray(row.room_groups)) row.room_groups = row.room_groups[0] || null;
+      if (Array.isArray(row.task_types)) row.task_types = row.task_types[0] || null;
       if (Array.isArray(row.assignee)) row.assignee = row.assignee[0] || null;
       if (Array.isArray(row.completer)) row.completer = row.completer[0] || null;
       setSelectedTask(row);
@@ -331,6 +335,7 @@ export function DashboardGrid({ userId }: { userId: string }) {
         open={showAddTask}
         projects={projects}
         profiles={profiles}
+        taskTypes={taskTypes}
         userId={userId}
         onClose={() => setShowAddTask(false)}
         onCreated={() => { setShowAddTask(false); router.refresh(); }}
@@ -351,6 +356,7 @@ export function DashboardGrid({ userId }: { userId: string }) {
       <TaskDetailPanel
         task={selectedTask}
         profiles={profiles}
+        taskTypes={taskTypes}
         userId={userId}
         onClose={() => setSelectedTask(null)}
         onUpdated={(updated) => { setSelectedTask(updated); router.refresh(); }}
