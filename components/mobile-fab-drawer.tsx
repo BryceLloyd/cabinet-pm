@@ -219,9 +219,9 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
     <Drawer.Root open={open} onOpenChange={onOpenChange}>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 bg-black/40 z-50" />
-        <Drawer.Content className="fixed bottom-0 inset-x-0 z-50 rounded-t-xl bg-background">
+        <Drawer.Content className="fixed bottom-0 inset-x-0 z-50 rounded-t-xl bg-background max-h-[85vh] flex flex-col">
           <div className="mx-auto w-12 h-1.5 shrink-0 rounded-full bg-muted-foreground/20 my-3" />
-          <div className="px-4 pb-[calc(2rem+env(safe-area-inset-bottom))]">
+          <div className="px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] overflow-y-auto flex-1">
 
             {/* Dashboard picker */}
             {view === "dashboard-picker" && (
