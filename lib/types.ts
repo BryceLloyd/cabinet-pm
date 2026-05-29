@@ -63,6 +63,7 @@ export interface Task {
   project_id: string | null;
   room_id: string | null;
   room_group_id: string | null;
+  task_type_id: string | null;
   assigned_to: string | null;
   completed_by: string | null;
   completed_at: string | null;
@@ -70,6 +71,15 @@ export interface Task {
   created_by: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface TaskType {
+  id: string;
+  name: string;
+  color: string;
+  sort_order: number;
+  archived_at: string | null;
+  created_at: string;
 }
 
 export interface BusinessInfo {

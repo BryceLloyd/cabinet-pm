@@ -18,7 +18,7 @@ export default async function TasksPage({
 
   let query = supabase
     .from("tasks")
-    .select("*, projects(name), rooms(name), assignee:assigned_to(full_name), completer:completed_by(full_name)");
+    .select("*, projects(name), rooms(name), room_groups(name), task_types(id,name,color), assignee:assigned_to(full_name), completer:completed_by(full_name)");
 
   if (filter === "mine") {
     query = query.eq("assigned_to", user!.id).is("completed_at", null)
@@ -37,7 +37,7 @@ export default async function TasksPage({
       .order("created_at", { ascending: false });
   }
 
-  const [{ data: tasks }, { data: projects }, { data: profiles }] = await Promise.all([
+  const [{ data: tasks }, { data: projects }, { data: profiles }, { data: taskTypes }] = await Promise.all([
     query,
     supabase
       .from("projects")
@@ -45,6 +45,7 @@ export default async function TasksPage({
       .in("status", ["planning", "active"])
       .order("name"),
     supabase.from("profiles").select("id, full_name").is("deactivated_at", null),
+    supabase.from("task_types").select("id, name, color").is("archived_at", null).order("sort_order"),
   ]);
 
   return (
@@ -53,6 +54,7 @@ export default async function TasksPage({
       initialTasks={tasks || []}
       projects={projects || []}
       profiles={profiles || []}
+      taskTypes={taskTypes || []}
       userId={user!.id}
       filter={filter}
     />

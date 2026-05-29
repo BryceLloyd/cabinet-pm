@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { SlidePanel } from "@/components/ui/slide-panel";
 
@@ -14,10 +14,17 @@ interface ProfileOption {
   full_name: string;
 }
 
+interface TaskTypeOption {
+  id: string;
+  name: string;
+  color: string;
+}
+
 interface AddTaskPanelProps {
   open: boolean;
   projects: ProjectOption[];
   profiles: ProfileOption[];
+  taskTypes: TaskTypeOption[];
   userId: string;
   onClose: () => void;
   onCreated: (task: any) => void;
@@ -27,6 +34,7 @@ export function AddTaskPanel({
   open,
   projects,
   profiles,
+  taskTypes,
   userId,
   onClose,
   onCreated,
@@ -35,14 +43,44 @@ export function AddTaskPanel({
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [projectId, setProjectId] = useState("");
+  const [roomGroupId, setRoomGroupId] = useState("");
+  const [roomId, setRoomId] = useState("");
+  const [taskTypeId, setTaskTypeId] = useState("");
   const [assignee, setAssignee] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const [roomGroups, setRoomGroups] = useState<{ id: string; name: string }[]>([]);
+  const [rooms, setRooms] = useState<{ id: string; name: string; room_group_id: string | null }[]>([]);
+
+  useEffect(() => {
+    if (!projectId) {
+      setRoomGroups([]);
+      setRooms([]);
+      setRoomGroupId("");
+      setRoomId("");
+      return;
+    }
+    Promise.all([
+      supabase.from("room_groups").select("id, name").eq("project_id", projectId).order("sort_order"),
+      supabase.from("rooms").select("id, name, room_group_id").eq("project_id", projectId).order("sort_order"),
+    ]).then(([{ data: rg }, { data: r }]) => {
+      setRoomGroups(rg || []);
+      setRooms(r || []);
+    });
+  }, [projectId, supabase]);
+
+  const filteredRooms = roomGroupId
+    ? rooms.filter((r) => r.room_group_id === roomGroupId)
+    : rooms;
 
   function resetForm() {
     setTitle("");
     setDueDate("");
     setProjectId("");
+    setRoomGroupId("");
+    setRoomId("");
+    setTaskTypeId("");
     setAssignee("");
     setNotes("");
   }
@@ -63,12 +101,14 @@ export function AddTaskPanel({
         title: title.trim(),
         description: notes.trim() || null,
         project_id: projectId || null,
-        room_id: null,
+        room_group_id: roomGroupId || null,
+        room_id: roomId || null,
+        task_type_id: taskTypeId || null,
         assigned_to: isPersonal ? userId : assignee || null,
         due_date: dueDate || null,
         created_by: userId,
       })
-      .select("*, projects(name), rooms(name), assignee:assigned_to(full_name), completer:completed_by(full_name)")
+      .select("*, projects(name), rooms(name), room_groups(name), task_types(id,name,color), assignee:assigned_to(full_name), completer:completed_by(full_name)")
       .single();
 
     setSaving(false);
@@ -98,6 +138,25 @@ export function AddTaskPanel({
         />
       </div>
 
+      {/* Task type */}
+      {taskTypes.length > 0 && (
+        <div className="mb-4">
+          <label className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+            Type
+          </label>
+          <select
+            value={taskTypeId}
+            onChange={(e) => setTaskTypeId(e.target.value)}
+            className="w-full h-9 px-2 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">No type</option>
+            {taskTypes.map((tt) => (
+              <option key={tt.id} value={tt.id}>{tt.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* Due date */}
       <div className="mb-4">
         <label className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
@@ -120,6 +179,8 @@ export function AddTaskPanel({
           value={projectId}
           onChange={(e) => {
             setProjectId(e.target.value);
+            setRoomGroupId("");
+            setRoomId("");
             if (!e.target.value) setAssignee("");
           }}
           className="w-full h-9 px-2 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -130,6 +191,47 @@ export function AddTaskPanel({
           ))}
         </select>
       </div>
+
+      {/* Room group */}
+      {roomGroups.length > 0 && (
+        <div className="mb-4">
+          <label className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+            Room group
+          </label>
+          <select
+            value={roomGroupId}
+            onChange={(e) => {
+              setRoomGroupId(e.target.value);
+              setRoomId("");
+            }}
+            className="w-full h-9 px-2 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">No group</option>
+            {roomGroups.map((g) => (
+              <option key={g.id} value={g.id}>{g.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Room */}
+      {filteredRooms.length > 0 && (
+        <div className="mb-4">
+          <label className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+            Room
+          </label>
+          <select
+            value={roomId}
+            onChange={(e) => setRoomId(e.target.value)}
+            className="w-full h-9 px-2 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">No room</option>
+            {filteredRooms.map((r) => (
+              <option key={r.id} value={r.id}>{r.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Assignee */}
       <div className="mb-4">

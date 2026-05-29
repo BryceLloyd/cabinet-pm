@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, Building2, Users, Layers, CalendarDays, ChevronLeft } from "lucide-react";
+import { User, Building2, Users, Layers, CalendarDays, Tag, ChevronLeft } from "lucide-react";
 
 const SETTINGS_NAV = [
   { href: "/settings/profile", label: "Profile", icon: User },
@@ -10,6 +10,7 @@ const SETTINGS_NAV = [
   { href: "/settings/team", label: "Team", icon: Users },
   { href: "/settings/phases", label: "Phases", icon: Layers },
   { href: "/settings/event-types", label: "Event types", icon: CalendarDays },
+  { href: "/settings/task-types", label: "Task types", icon: Tag },
 ] as const;
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
@@ -28,7 +29,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
               return (
                 <Link
                   key={item.href}
-                  href={item.href}
+                  href={item.href as any}
                   className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
                     isActive
                       ? "bg-muted font-medium text-foreground"
