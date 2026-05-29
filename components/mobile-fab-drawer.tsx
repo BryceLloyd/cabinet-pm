@@ -11,6 +11,7 @@ import type { FabDrawerMode } from "@/components/mobile-fab";
 type DrawerView = FabDrawerMode | "add-room";
 
 type EventTypeOption = { id: string; name: string; color: string };
+type TaskTypeOption = { id: string; name: string; color: string };
 
 interface Props {
   open: boolean;
@@ -28,6 +29,9 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
   const [title, setTitle] = useState("");
   const [taskProjectId, setTaskProjectId] = useState(projectId || "");
   const [taskRoomGroupId, setTaskRoomGroupId] = useState("");
+  const [taskRoomId, setTaskRoomId] = useState("");
+  const [taskTypeId, setTaskTypeId] = useState("");
+  const [taskNotes, setTaskNotes] = useState("");
   const [assignee, setAssignee] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [saving, setSaving] = useState(false);
@@ -47,6 +51,8 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
   const [profiles, setProfiles] = useState<{ id: string; full_name: string }[]>([]);
   const [roomGroups, setRoomGroups] = useState<{ id: string; name: string }[]>([]);
+  const [taskRooms, setTaskRooms] = useState<{ id: string; name: string; room_group_id: string | null }[]>([]);
+  const [taskTypes, setTaskTypes] = useState<TaskTypeOption[]>([]);
   const [eventTypes, setEventTypes] = useState<EventTypeOption[]>([]);
   const [eventRoomGroups, setEventRoomGroups] = useState<{ id: string; name: string }[]>([]);
   const [optionsLoaded, setOptionsLoaded] = useState(false);
@@ -61,6 +67,9 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
       setAssignee("");
       setTaskProjectId(projectId || "");
       setTaskRoomGroupId("");
+      setTaskRoomId("");
+      setTaskTypeId("");
+      setTaskNotes("");
       setEventTitle("");
       setEventDate(format(new Date(), "yyyy-MM-dd"));
       setEventTypeId("");
@@ -86,19 +95,30 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
         .select("id, name, color")
         .is("archived_at", null)
         .order("sort_order"),
-    ]).then(([{ data: p }, { data: pr }, { data: et }]) => {
+      supabase
+        .from("task_types")
+        .select("id, name, color")
+        .is("archived_at", null)
+        .order("sort_order"),
+    ]).then(([{ data: p }, { data: pr }, { data: et }, { data: tt }]) => {
       setProjects(p || []);
       setProfiles(pr || []);
       setEventTypes(et || []);
+      setTaskTypes(tt || []);
       setOptionsLoaded(true);
     });
   }, [open, optionsLoaded, supabase]);
 
-  // Load room groups when task project selection changes
+  // Load room groups and rooms when task project selection changes
   useEffect(() => {
-    if (!taskProjectId) { setRoomGroups([]); return; }
-    supabase.from("room_groups").select("id, name").eq("project_id", taskProjectId).order("sort_order")
-      .then(({ data }) => setRoomGroups(data || []));
+    if (!taskProjectId) { setRoomGroups([]); setTaskRooms([]); setTaskRoomGroupId(""); setTaskRoomId(""); return; }
+    Promise.all([
+      supabase.from("room_groups").select("id, name").eq("project_id", taskProjectId).order("sort_order"),
+      supabase.from("rooms").select("id, name, room_group_id").eq("project_id", taskProjectId).order("sort_order"),
+    ]).then(([{ data: rg }, { data: r }]) => {
+      setRoomGroups(rg || []);
+      setTaskRooms(r || []);
+    });
   }, [taskProjectId, supabase]);
 
   // Load room groups when event project selection changes
@@ -119,9 +139,11 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
     const isPersonal = !taskProjectId;
     const { error } = await supabase.from("tasks").insert({
       title: title.trim(),
+      description: taskNotes.trim() || null,
       project_id: taskProjectId || null,
-      room_id: null,
+      room_id: taskRoomId || null,
       room_group_id: taskRoomGroupId || null,
+      task_type_id: taskTypeId || null,
       assigned_to: isPersonal ? user.id : assignee || null,
       due_date: dueDate || null,
       created_by: user.id,
@@ -310,9 +332,25 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
                   className="w-full h-10 px-3 text-sm rounded-md border bg-background"
                   autoFocus
                 />
+                {taskTypes.length > 0 && (
+                  <select
+                    value={taskTypeId}
+                    onChange={(e) => setTaskTypeId(e.target.value)}
+                    className="w-full h-10 px-2 text-sm rounded-md border bg-background"
+                  >
+                    <option value="">No type</option>
+                    {taskTypes.map((tt) => <option key={tt.id} value={tt.id}>{tt.name}</option>)}
+                  </select>
+                )}
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="w-full h-10 px-2 text-sm rounded-md border bg-background"
+                />
                 <select
                   value={taskProjectId}
-                  onChange={(e) => setTaskProjectId(e.target.value)}
+                  onChange={(e) => { setTaskProjectId(e.target.value); setTaskRoomGroupId(""); setTaskRoomId(""); if (!e.target.value) setAssignee(""); }}
                   className="w-full h-10 px-2 text-sm rounded-md border bg-background"
                 >
                   <option value="">Personal todo</option>
@@ -325,36 +363,47 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
                 {roomGroups.length > 0 && (
                   <select
                     value={taskRoomGroupId}
-                    onChange={(e) => setTaskRoomGroupId(e.target.value)}
+                    onChange={(e) => { setTaskRoomGroupId(e.target.value); setTaskRoomId(""); }}
                     className="w-full h-10 px-2 text-sm rounded-md border bg-background"
                   >
                     <option value="">No group</option>
                     {roomGroups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
                   </select>
                 )}
-                <div className="grid grid-cols-2 gap-2">
-                  <select
-                    value={assignee}
-                    onChange={(e) => setAssignee(e.target.value)}
-                    className="h-10 px-2 text-sm rounded-md border bg-background"
-                    disabled={!taskProjectId}
-                  >
-                    <option value="">
-                      {taskProjectId ? "Unassigned" : "Assigned to you"}
+                {(() => {
+                  const filtered = taskRoomGroupId ? taskRooms.filter((r) => r.room_group_id === taskRoomGroupId) : taskRooms;
+                  return filtered.length > 0 ? (
+                    <select
+                      value={taskRoomId}
+                      onChange={(e) => setTaskRoomId(e.target.value)}
+                      className="w-full h-10 px-2 text-sm rounded-md border bg-background"
+                    >
+                      <option value="">No room</option>
+                      {filtered.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                    </select>
+                  ) : null;
+                })()}
+                <select
+                  value={assignee}
+                  onChange={(e) => setAssignee(e.target.value)}
+                  className="w-full h-10 px-2 text-sm rounded-md border bg-background"
+                  disabled={!taskProjectId}
+                >
+                  <option value="">
+                    {taskProjectId ? "Unassigned" : "Assigned to you"}
+                  </option>
+                  {profiles.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.full_name}
                     </option>
-                    {profiles.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.full_name}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="date"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    className="h-10 px-2 text-sm rounded-md border bg-background"
-                  />
-                </div>
+                  ))}
+                </select>
+                <input
+                  value={taskNotes}
+                  onChange={(e) => setTaskNotes(e.target.value)}
+                  placeholder="Notes (optional)"
+                  className="w-full h-10 px-3 text-sm rounded-md border bg-background"
+                />
                 <button
                   onClick={addTask}
                   disabled={!title.trim() || saving}
