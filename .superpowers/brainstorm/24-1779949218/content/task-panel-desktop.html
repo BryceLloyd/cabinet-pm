@@ -1,0 +1,88 @@
+<h2>Task Detail — Slide Panel (Desktop)</h2>
+<p class="subtitle">Click a task → panel slides in from the right. Backdrop dims the rest of the page.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Desktop — Task Slide Panel</div>
+  <div class="mockup-body" style="display:flex; height:420px; background:#f8f8f8; position:relative; overflow:hidden;">
+
+    <!-- Main page (dimmed) -->
+    <div style="flex:1; padding:20px; opacity:0.3;">
+      <div style="background:#fff; border-radius:8px; border:1px solid #e5e7eb; padding:16px; margin-bottom:12px;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+          <div style="width:16px; height:16px; border:2px solid #d1d5db; border-radius:3px;"></div>
+          <span style="font-size:14px; font-weight:500;">Order materials for Smith kitchen</span>
+          <span style="margin-left:auto; font-size:12px; color:#6b7280;">May 30</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="width:16px; height:16px; border:2px solid #d1d5db; border-radius:3px;"></div>
+          <span style="font-size:14px; font-weight:500;">Call supplier about edging</span>
+          <span style="margin-left:auto; font-size:12px; color:#6b7280;">Jun 2</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide panel from right -->
+    <div style="width:380px; background:#fff; border-left:1px solid #e5e7eb; padding:0; display:flex; flex-direction:column; box-shadow:-4px 0 12px rgba(0,0,0,0.08);">
+
+      <!-- Panel header -->
+      <div style="padding:16px 20px; border-bottom:1px solid #e5e7eb; display:flex; align-items:center; justify-content:space-between;">
+        <span style="font-size:14px; font-weight:600; color:#111;">Task Detail</span>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <div style="width:28px; height:28px; border-radius:6px; border:1px solid #e5e7eb; display:grid; place-items:center; cursor:pointer; font-size:12px; color:#ef4444;">🗑</div>
+          <div style="width:28px; height:28px; border-radius:6px; border:1px solid #e5e7eb; display:grid; place-items:center; cursor:pointer; font-size:14px; color:#6b7280;">✕</div>
+        </div>
+      </div>
+
+      <!-- Panel body -->
+      <div style="padding:20px; flex:1; overflow-y:auto;">
+
+        <!-- Checkbox + Title -->
+        <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:20px;">
+          <div style="width:18px; height:18px; border:2px solid #d1d5db; border-radius:3px; margin-top:2px; flex-shrink:0;"></div>
+          <div style="flex:1; font-size:15px; font-weight:500; color:#111; padding:2px 6px; border-radius:4px; border:1px solid transparent; cursor:text;">Order materials for Smith kitchen</div>
+        </div>
+
+        <!-- Due date -->
+        <div style="margin-bottom:16px;">
+          <label style="display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; margin-bottom:6px;">Due date</label>
+          <div style="display:flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid #e5e7eb; border-radius:6px; font-size:13px; color:#111; cursor:pointer;">
+            <span style="color:#6b7280;">📅</span> Fri, May 30 2026
+          </div>
+        </div>
+
+        <!-- Assignee -->
+        <div style="margin-bottom:16px;">
+          <label style="display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; margin-bottom:6px;">Assigned to</label>
+          <div style="display:flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid #e5e7eb; border-radius:6px; font-size:13px; color:#111; cursor:pointer;">
+            <div style="width:22px; height:22px; border-radius:50%; background:#2d6a1f; color:#fff; display:grid; place-items:center; font-size:10px; font-weight:600;">BL</div>
+            Bryce Lloyd
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div style="margin-bottom:16px;">
+          <label style="display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; margin-bottom:6px;">Notes</label>
+          <div style="padding:10px 12px; border:1px solid #e5e7eb; border-radius:6px; font-size:13px; color:#6b7280; min-height:80px; cursor:text; line-height:1.5;">
+            Check with Timber City re: availability of Supawood 16mm White. Need 6 sheets minimum. Ask about lead time for Duco finish boards.
+          </div>
+        </div>
+
+        <!-- Meta info -->
+        <div style="padding-top:12px; border-top:1px solid #f3f4f6; font-size:11px; color:#9ca3af;">
+          Created May 25, 2026 · 01SMITH-01KIT
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:20px;">
+  <h3>Behavior</h3>
+  <ul style="font-size:14px; line-height:1.8; color:#555;">
+    <li><strong>Open:</strong> Click any task row/card → panel slides in from right</li>
+    <li><strong>Close:</strong> Click ✕, click backdrop, or press Escape</li>
+    <li><strong>Edit:</strong> All fields are directly editable (click to focus). Auto-saves on change.</li>
+    <li><strong>Delete:</strong> Trash icon → confirm dialog → removes task</li>
+    <li><strong>Complete:</strong> Checkbox toggles complete/incomplete from within panel</li>
+  </ul>
+</div>

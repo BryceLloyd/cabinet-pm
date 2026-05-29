@@ -1,0 +1,383 @@
+{
+  "project": "cabinet-pm",
+  "document": "Roadmap — queued changes after initial deploy",
+  "generated": "2026-05-27",
+  "status_legend": {
+    "queued": "Captured and specced, brief not yet written",
+    "brief_written": "Implementation brief exists in docs/",
+    "in_progress": "Claude Code working on it",
+    "deployed": "Merged and live"
+  },
+  "notes": [
+    "Briefs are sequenced to respect dependencies and to keep each merge reviewable.",
+    "Each brief produces multiple commits (one per phase within the brief).",
+    "Brief 001 is already complete and deployed.",
+    "Brief 002 has been written; remaining briefs are specced but not yet drafted.",
+    "CRM module is captured separately in docs/FUTURE_CRM.md and is not part of this roadmap.",
+    "Each change carries a 'principles' field that must be enforced when its brief is written, so Claude Code does not quietly expand scope."
+  ],
+
+  "briefs": [
+    {
+      "id": "BRIEF_002",
+      "status": "brief_written",
+      "file": "docs/CLAUDE_CODE_BRIEF_002.md",
+      "title": "Header restructure, customisable dashboard, bigger mobile tabs",
+      "rationale": "Make the app feel personal (business name in header), give each user control over their own dashboard, and fix the mobile tap-target problem.",
+      "phases": [
+        {
+          "name": "Header restructure",
+          "summary": "Move business name + page title inline with avatar; remove standalone heading block from each page body."
+        },
+        {
+          "name": "Bigger mobile bottom tabs",
+          "summary": "72px tab bar, 24px icons, active-state pill, iOS safe-area handling."
+        },
+        {
+          "name": "Dashboard cards infrastructure",
+          "summary": "dashboard_layouts table (per-user JSONB), base DashboardCard component, registry pattern, drag-and-drop via @dnd-kit, edit mode with add/remove."
+        },
+        {
+          "name": "Dashboard cards implementation",
+          "summary": "Six initial card types: my_tasks, upcoming_deadlines, projects_by_phase, team_workload, personal_todos, notes."
+        }
+      ],
+      "principles": [
+        "One new dependency only (@dnd-kit).",
+        "Card components must be lazy-imported.",
+        "Mobile-first dashboard grid, test at 375px.",
+        "Personal data (dashboard layouts) is per-user via RLS."
+      ],
+      "depends_on": ["BRIEF_001"]
+    },
+
+    {
+      "id": "BRIEF_003",
+      "status": "queued",
+      "title": "Mobile FAB + Phase management UI",
+      "rationale": "Two small contained improvements that can ship together. FAB makes mobile task/project creation feel native; phase management UI replaces the 'edit in Supabase dashboard' workaround.",
+      "phases": [
+        {
+          "name": "Mobile FAB",
+          "summary": "Pill-style floating action button (icon + label) at bottom-center on mobile, above the tab bar. Opens a bottom sheet with a quick-add form. Per-page behaviour: Dashboard '+ Add' picker (project / task / personal todo); Year plan '+ New project'; Projects '+ New project'; Project detail '+ Add' picker (room / task); Tasks '+ New task'; Settings: none. Desktop keeps existing top-right buttons.",
+          "principles": [
+            "Mobile only — do not render on desktop.",
+            "Bottom sheet uses Radix Dialog or Drawer, not a custom modal.",
+            "Quick-add forms have minimum viable fields only; full edit happens after creation."
+          ]
+        },
+        {
+          "name": "Phase management UI",
+          "summary": "Settings → Phases becomes editable for admins: add/edit/reorder/set-default/soft-delete phases. Soft delete via archived_at column. Reorder via @dnd-kit. Confirmation modal before archiving phases in use.",
+          "schema_changes": [
+            "alter table phases add column archived_at timestamptz",
+            "Update all phase select queries to filter where archived_at is null (except history/audit contexts)"
+          ],
+          "principles": [
+            "Preset Tailwind colour palette only — no custom hex input.",
+            "Non-admins keep read-only view of phases list.",
+            "Soft delete preserves room_phase_history references."
+          ]
+        }
+      ],
+      "depends_on": ["BRIEF_002"]
+    },
+
+    {
+      "id": "BRIEF_004",
+      "status": "queued",
+      "title": "Settings overhaul (sectioned) + Profile + theme + density",
+      "rationale": "Settings becomes a sectioned page with proper navigation. Profile section unlocks per-user preferences. Theme support means dark mode must work end-to-end across every page — this is the meatiest part of the brief.",
+      "phases": [
+        {
+          "name": "Sectioned settings layout",
+          "summary": "Settings becomes URL-routed sections: /settings/profile, /settings/business, /settings/team, /settings/phases. Desktop: left sidebar + content area. Mobile: drill-in list (sections as tappable list, back arrow to return). /settings redirects to /settings/profile on desktop, shows list on mobile."
+        },
+        {
+          "name": "Profile section",
+          "summary": "Current user's profile: name, avatar upload, email (read-only), sign out, plus preferences below.",
+          "schema_changes": [
+            "alter table profiles add column theme_preference text default 'system' check (theme_preference in ('light', 'dark', 'system'))",
+            "alter table profiles add column density_preference text default 'comfortable' check (density_preference in ('compact', 'comfortable'))",
+            "alter table profiles add column notification_preferences jsonb default '{}'::jsonb"
+          ]
+        },
+        {
+          "name": "Theme support + dark mode audit",
+          "summary": "Theme preference applied via client-side provider toggling 'dark' class on <html>. THEN: audit every existing page and component for dark mode rendering. Fix any hardcoded colours or missing token usage. This is genuinely ~30% of the brief's effort — do not skip it.",
+          "principles": [
+            "Every page must work in both light and dark mode before this phase is considered done.",
+            "Use existing CSS variable tokens — do not invent new colour values.",
+            "Test at every page: dashboard, plan (both gantt and calendar), projects list, project detail, tasks, settings (all sections), login."
+          ]
+        },
+        {
+          "name": "Density preference",
+          "summary": "Compact vs comfortable: applied via root class. Affects card padding, table row height, font size by one step. Document exactly which values change in DECISIONS.md so it stays consistent."
+        },
+        {
+          "name": "Team section",
+          "summary": "View team members. Admins can change roles only — cannot edit other people's names/avatars (users own their own profile). Notification preferences placeholder structure exists but is empty until Brief 007."
+        }
+      ],
+      "principles": [
+        "Dark mode is not optional — the brief is not done until every existing page renders cleanly in dark mode.",
+        "Notification preferences schema goes in NOW (jsonb column) so Brief 007 doesn't need a migration.",
+        "Density is a smaller pass than theme but still needs to be applied consistently."
+      ],
+      "depends_on": ["BRIEF_002"]
+    },
+
+    {
+      "id": "BRIEF_005",
+      "status": "queued",
+      "title": "Room groups + per-project phase planning",
+      "rationale": "Cabinet work flows by room group (Kitchen + Scullery installed together) not by individual room. This brief introduces room_groups as a third hierarchy level and adds intra-project phase scheduling visualized on a project-scoped Gantt.",
+      "phases": [
+        {
+          "name": "Room groups schema",
+          "summary": "Introduce room_groups table; rooms get nullable room_group_id. Existing rooms are 'ungrouped' until manually grouped. Update room creation flow to include group picker.",
+          "schema_changes": [
+            "create table room_groups (id, project_id, name, sort_order, notes, created_at)",
+            "alter table rooms add column room_group_id uuid references room_groups(id) on delete set null",
+            "Indexes for project_id and room_group_id lookups"
+          ]
+        },
+        {
+          "name": "Phase plans schema + auto-fill",
+          "summary": "phase_plans table attaching to either room_group_id OR project_id (constraint: exactly one set). Auto-fill on first open uses sensible defaults (e.g. Design 25%, Production 60%, Install 15%) distributed across whatever phases the user has configured.",
+          "schema_changes": [
+            "create table phase_plans (id, room_group_id nullable, project_id nullable, phase_id, start_date, end_date, with constraint that exactly one of room_group_id or project_id is set)",
+            "Range index on (start_date, end_date)"
+          ],
+          "principles": [
+            "Soft warning on overlapping or out-of-order phase dates — do not block.",
+            "Auto-fill must work for any configured phase set, not hardcoded to Design/Production/Install."
+          ]
+        },
+        {
+          "name": "Project planning Gantt",
+          "summary": "New 'Planning' section on project detail page. Project-scoped Gantt: lead-time baseline at top (project start → completion), one row per room group with phase bars, one row for ungrouped rooms if any exist (showing project-level fallback). Edit via both visual drag on Gantt AND form below (table of group × phase × start × end).",
+          "principles": [
+            "Visual drag and form must stay in sync — single source of truth.",
+            "Reuse the SVG Gantt approach from year-plan, do not introduce a charting library."
+          ]
+        },
+        {
+          "name": "Year plan integration",
+          "summary": "Year plan Gantt becomes expandable: tapping a project row reveals its room group sub-bars. Collapsed by default. Preserves existing year-plan UX for users who don't want the extra detail."
+        }
+      ],
+      "principles": [
+        "Room groups are a hierarchy level, not a tag — proper foreign key, not a string field.",
+        "Ungrouped rooms continue to work — backward compatible with existing data.",
+        "Cascade behaviour: deleting a room group sets affected rooms to ungrouped, does not delete rooms."
+      ],
+      "depends_on": ["BRIEF_002", "BRIEF_003"]
+    },
+
+    {
+      "id": "BRIEF_006",
+      "status": "queued",
+      "title": "Task system overhaul",
+      "rationale": "Tasks become first-class objects rather than list rows. Many-to-many assignees, many-to-many rooms AND room groups, checklists with auto-complete, shared task templates. This is the largest single change in the roadmap.",
+      "phases": [
+        {
+          "name": "Schema migration",
+          "summary": "Migrate from single assigned_to / room_id columns to join tables. Preserve existing task data via data migration step.",
+          "schema_changes": [
+            "create table task_assignees (task_id, profile_id, primary key composite)",
+            "create table task_rooms (task_id, room_id, primary key composite)",
+            "create table task_room_groups (task_id, room_group_id, primary key composite)",
+            "create table task_checklist_items (id, task_id, label, sort_order, completed_by, completed_at)",
+            "create table task_templates (id, title, description, default_priority, created_by, created_at)",
+            "create table task_template_checklist_items (id, template_id, label, sort_order)",
+            "Data migration: copy tasks.assigned_to into task_assignees; copy tasks.room_id into task_rooms",
+            "Drop columns tasks.assigned_to and tasks.room_id after migration verified"
+          ],
+          "principles": [
+            "Data migration is non-destructive — verify counts before dropping old columns.",
+            "RLS for personal todos updates: 'no project AND no rooms AND no room_groups' rather than current 'no project AND no room'."
+          ]
+        },
+        {
+          "name": "Checklist auto-complete trigger",
+          "summary": "Postgres trigger on task_checklist_items: when all items for a task are completed_at != null, set parent task.completed_at = now(), completed_by = whoever ticked the last item.",
+          "principles": [
+            "Trigger handles the reverse too: unchecking an item un-completes the parent task.",
+            "Tasks with no checklist items continue to behave as before (manual complete)."
+          ]
+        },
+        {
+          "name": "Task detail bottom sheet / side panel",
+          "summary": "Tap task row → opens detail view. Mobile: bottom sheet (Radix Drawer). Desktop: side panel sliding in from right. Shows all task fields, assignee chips, room/group chips, checklist, metadata. Edit inline.",
+          "principles": [
+            "Smart room picker: groups shown at top, rooms expandable below. Selecting a group deselects its individual rooms to avoid double-linking.",
+            "Real-time updates if multiple users have the same task open (use Supabase Realtime channel on task ID)."
+          ]
+        },
+        {
+          "name": "Task templates",
+          "summary": "Templates managed in Settings → new 'Templates' section. Shared team-wide. Anyone can create/edit. 'Start from template' option in quick-add flow shows template picker.",
+          "principles": [
+            "Template-to-task is a one-time copy — editing template does NOT update existing tasks.",
+            "Templates can include a default checklist that gets copied in.",
+            "Common templates to seed: Quote, Cut list, Site measure, Delivery, Install."
+          ]
+        },
+        {
+          "name": "Query updates across app",
+          "summary": "All existing task queries need updating: dashboard cards (my_tasks, personal_todos), tasks page, project detail tasks list. Verify nothing references the dropped columns."
+        }
+      ],
+      "principles": [
+        "This brief depends on Brief 005 (room groups) — do not start before that is merged.",
+        "Migration must preserve existing task data perfectly.",
+        "Bottom sheet / side panel pattern can be reused for project quick-view later."
+      ],
+      "depends_on": ["BRIEF_005"]
+    },
+
+    {
+      "id": "BRIEF_007",
+      "status": "queued",
+      "title": "Notifications — in-app + push",
+      "rationale": "Low-noise notification system. Three triggers only: task assigned, task due today, phase changed. In-app bell icon + Web Push via VAPID (no third-party service). Email digests are deliberately deferred to Brief 008 so we can validate the in-app version is actually useful before adding email.",
+      "phases": [
+        {
+          "name": "Notifications schema",
+          "summary": "notifications table for the inbox; push_subscriptions table for per-device push endpoints. Notification preferences live on profiles.notification_preferences (jsonb column added in Brief 004).",
+          "schema_changes": [
+            "create table notifications (id, user_id, type, title, body, link, read_at, created_at, dedupe_key)",
+            "create table push_subscriptions (id, user_id, endpoint, p256dh, auth, user_agent, created_at)",
+            "create index on notifications (user_id, created_at desc) where read_at is null"
+          ]
+        },
+        {
+          "name": "Bell icon + dropdown",
+          "summary": "Bell icon top-right next to avatar. Badge with unread count. Dropdown shows recent notifications (latest 20). Tap notification → marks read + navigates to link. 'Mark all read' button. No auto-expire."
+        },
+        {
+          "name": "PWA setup",
+          "summary": "manifest.json with icons + theme colours + display mode standalone. Service worker registered from root. Install prompt component (mobile only) that explains the iOS flow: Safari → Add to Home Screen → open from icon → grant permission.",
+          "principles": [
+            "Document the iOS install flow clearly — users will not figure it out alone.",
+            "Service worker must handle push events even when app is not open."
+          ]
+        },
+        {
+          "name": "Web Push via VAPID",
+          "summary": "Generate VAPID keypair (one-time setup, store private key in env). Subscribe flow: user grants permission, browser returns subscription endpoint, store in push_subscriptions. Send via web-push npm library from a Vercel function. No third-party push service.",
+          "principles": [
+            "Self-managed push — no OneSignal, no Firebase.",
+            "Handle stale subscriptions: if push send returns 410 Gone, delete the subscription row."
+          ]
+        },
+        {
+          "name": "Notification triggers",
+          "summary": "Three triggers only. (a) Task assigned: trigger on task_assignees insert. (b) Task due today: Vercel Cron at 06:00 local scans for tasks due today and creates notifications. (c) Phase changed: trigger on rooms.current_phase_id change, but only for users where notification_preferences.phase_changes_enabled is true.",
+          "principles": [
+            "Dedupe via dedupe_key — 'task due today' for task X on date Y should only fire once.",
+            "Phase change opt-in is a single global toggle in Profile, applies to all projects.",
+            "ABSOLUTELY DO NOT add notification types beyond these three. No 'task edited', no 'comment added', no 'project viewed'. The brief must call this out explicitly."
+          ]
+        },
+        {
+          "name": "Preferences UI in Profile",
+          "summary": "Fill in the notification preferences section in Profile. Per-notification-type delivery: in-app on/off, push on/off. Phase changes: single on/off toggle.",
+          "principles": [
+            "Sensible defaults: in-app ON for all three types, push OFF for all (user opts in per device by granting browser permission)."
+          ]
+        }
+      ],
+      "principles": [
+        "Low-noise is a CONSTRAINT, not a guideline. Three notification types. No exceptions in this brief.",
+        "In-app first, push second within the same brief — get in-app working before integrating PWA push.",
+        "iOS push requires the PWA to be installed to home screen first — there is no workaround. Document this.",
+        "All notifications must have a meaningful 'link' field for deep navigation."
+      ],
+      "depends_on": ["BRIEF_004", "BRIEF_006"]
+    },
+
+    {
+      "id": "BRIEF_008",
+      "status": "queued",
+      "title": "Notifications — email digests",
+      "rationale": "Daily and weekly email briefs via Resend. Strategic/summary content, not a flood. Daily is reactive (here's what's on your plate); weekly is strategic (here's the shape of your week). Built AFTER Brief 007 so we can validate the in-app experience first.",
+      "phases": [
+        {
+          "name": "Resend integration",
+          "summary": "Set up Resend account, verify a sending subdomain (e.g. notifications@your-business-domain), store API key in env, install resend SDK."
+        },
+        {
+          "name": "Daily brief",
+          "summary": "Monday-Friday 7am via Vercel Cron. Content: tasks due today, overdue tasks, phase changes on subscribed projects since yesterday. Skip-if-empty — do not send if there is nothing to say.",
+          "principles": [
+            "Fixed 7am Mon-Fri — not user configurable for v1.",
+            "Skip-if-empty is mandatory — sending an empty digest erodes trust in the feature."
+          ]
+        },
+        {
+          "name": "Weekly brief",
+          "summary": "Monday 7am. Content: projects completing this week, projects entering Production / Install this week, your open tasks grouped by project, bottlenecks (rooms stuck in a phase >2 weeks).",
+          "principles": [
+            "Weekly is strategic — focus on shape-of-week, not granular activity.",
+            "Bottlenecks section is the 'management oversight' feature — make it visually prominent."
+          ]
+        },
+        {
+          "name": "Email preferences + unsubscribe",
+          "summary": "Profile gets daily-brief and weekly-brief opt-in toggles (default OFF — opt-in only). Every email has an unsubscribe link that toggles the preference for that user. One-click, no confirmation page.",
+          "principles": [
+            "Default OFF — user must opt in to receive emails.",
+            "Unsubscribe is one-click — no friction."
+          ]
+        }
+      ],
+      "principles": [
+        "Skip-if-empty for both daily and weekly.",
+        "Visual design of emails matters — branded header with business logo, readable on mobile, dark-mode-aware where possible.",
+        "Reuse business_info for from-name / branding in the email template."
+      ],
+      "depends_on": ["BRIEF_007"]
+    }
+  ],
+
+  "sequencing": {
+    "summary": "Suggested merge order. Each brief is fully reviewed and deployed before the next is started.",
+    "order": [
+      "BRIEF_002",
+      "BRIEF_003",
+      "BRIEF_004",
+      "BRIEF_005",
+      "BRIEF_006",
+      "BRIEF_007",
+      "BRIEF_008"
+    ],
+    "dependency_notes": [
+      "BRIEF_005 (room groups) MUST merge before BRIEF_006 (task overhaul) — tasks link to room groups.",
+      "BRIEF_004 adds notification_preferences column that BRIEF_007 uses — no migration needed in 007 because of this.",
+      "BRIEF_007 must merge before BRIEF_008 — email digests reuse notification subscription preferences.",
+      "BRIEF_003 (FAB + phase mgmt) is independent of later briefs and could be parallelised in theory, but recommend sequential to keep reviews simple."
+    ]
+  },
+
+  "deferred_to_future_work": {
+    "see": "docs/FUTURE_CRM.md",
+    "items": [
+      "CRM module — contacts, leads, pipeline, interactions",
+      "Email/calendar integration",
+      "Marketing automation",
+      "Custom fields"
+    ]
+  },
+
+  "cross_cutting_principles": [
+    "Each brief carries forward DECISIONS.md updates — friction observed during use shapes the next brief.",
+    "No new top-level dependencies unless explicitly required by a brief. Currently approved: @dnd-kit (Brief 002), web-push (Brief 007), resend (Brief 008).",
+    "Mobile-first UI testing at 375px width is required for every UI brief.",
+    "RLS must remain strict — personal data (dashboard layouts, profile prefs, personal todos, notification preferences) is per-user.",
+    "The eventual port to CabinetLogic Studio shapes some decisions — when in doubt, build the concept cleanly even if the code is throwaway.",
+    "Low-noise principle applies beyond notifications: the app should reduce work, not generate it. Resist adding 'helpful' surfaces."
+  ]
+}

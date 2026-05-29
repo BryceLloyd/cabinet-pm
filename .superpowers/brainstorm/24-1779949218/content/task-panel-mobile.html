@@ -1,0 +1,106 @@
+<h2>Task Detail — Slide Panel (Mobile)</h2>
+<p class="subtitle">Same panel, slides up from bottom on mobile. Drag handle to dismiss.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Mobile — Task Slide Panel (bottom sheet)</div>
+  <div class="mockup-body" style="display:flex; justify-content:center; background:#f8f8f8; padding:20px;">
+
+    <!-- Phone frame -->
+    <div style="width:320px; height:580px; background:#fff; border-radius:24px; border:2px solid #d1d5db; overflow:hidden; position:relative; box-shadow:0 4px 20px rgba(0,0,0,0.1);">
+
+      <!-- Status bar -->
+      <div style="height:28px; background:#111; display:flex; align-items:center; justify-content:space-between; padding:0 16px;">
+        <span style="font-size:10px; color:#fff; font-weight:600;">9:41</span>
+        <span style="font-size:10px; color:#fff;">⚡ 87%</span>
+      </div>
+
+      <!-- App header -->
+      <div style="padding:12px 16px; border-bottom:1px solid #e5e7eb; background:#fff;">
+        <span style="font-size:15px; font-weight:600; color:#111;">Tasks</span>
+      </div>
+
+      <!-- Task list (dimmed behind) -->
+      <div style="padding:12px 16px; opacity:0.2;">
+        <div style="background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:10px 12px; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+          <div style="width:14px; height:14px; border:2px solid #d1d5db; border-radius:3px; flex-shrink:0;"></div>
+          <span style="font-size:13px;">Order materials for Smith</span>
+        </div>
+        <div style="background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:10px 12px; display:flex; align-items:center; gap:8px;">
+          <div style="width:14px; height:14px; border:2px solid #d1d5db; border-radius:3px; flex-shrink:0;"></div>
+          <span style="font-size:13px;">Call supplier about edging</span>
+        </div>
+      </div>
+
+      <!-- Dimmed backdrop -->
+      <div style="position:absolute; inset:0; background:rgba(0,0,0,0.35);"></div>
+
+      <!-- Bottom sheet panel -->
+      <div style="position:absolute; bottom:0; left:0; right:0; background:#fff; border-radius:16px 16px 0 0; box-shadow:0 -4px 20px rgba(0,0,0,0.12); max-height:75%; display:flex; flex-direction:column;">
+
+        <!-- Drag handle -->
+        <div style="display:flex; justify-content:center; padding:10px 0 4px;">
+          <div style="width:36px; height:4px; background:#d1d5db; border-radius:2px;"></div>
+        </div>
+
+        <!-- Panel header -->
+        <div style="padding:4px 16px 12px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #e5e7eb;">
+          <span style="font-size:14px; font-weight:600; color:#111;">Task Detail</span>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <div style="width:28px; height:28px; border-radius:6px; border:1px solid #e5e7eb; display:grid; place-items:center; font-size:11px; color:#ef4444;">🗑</div>
+            <div style="width:28px; height:28px; border-radius:6px; border:1px solid #e5e7eb; display:grid; place-items:center; font-size:13px; color:#6b7280;">✕</div>
+          </div>
+        </div>
+
+        <!-- Panel body (scrollable) -->
+        <div style="padding:16px; overflow-y:auto; flex:1;">
+
+          <!-- Checkbox + Title -->
+          <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:16px;">
+            <div style="width:18px; height:18px; border:2px solid #d1d5db; border-radius:3px; margin-top:2px; flex-shrink:0;"></div>
+            <div style="flex:1; font-size:15px; font-weight:500; color:#111;">Order materials for Smith kitchen</div>
+          </div>
+
+          <!-- Due date -->
+          <div style="margin-bottom:14px;">
+            <label style="display:block; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; margin-bottom:5px;">Due date</label>
+            <div style="padding:8px 12px; border:1px solid #e5e7eb; border-radius:6px; font-size:13px; color:#111; display:flex; align-items:center; gap:6px;">
+              <span style="color:#6b7280; font-size:12px;">📅</span> Fri, May 30 2026
+            </div>
+          </div>
+
+          <!-- Assignee -->
+          <div style="margin-bottom:14px;">
+            <label style="display:block; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; margin-bottom:5px;">Assigned to</label>
+            <div style="padding:8px 12px; border:1px solid #e5e7eb; border-radius:6px; font-size:13px; color:#111; display:flex; align-items:center; gap:8px;">
+              <div style="width:20px; height:20px; border-radius:50%; background:#2d6a1f; color:#fff; display:grid; place-items:center; font-size:9px; font-weight:600;">BL</div>
+              Bryce Lloyd
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div style="margin-bottom:14px;">
+            <label style="display:block; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; margin-bottom:5px;">Notes</label>
+            <div style="padding:10px 12px; border:1px solid #e5e7eb; border-radius:6px; font-size:13px; color:#6b7280; min-height:60px; line-height:1.5;">
+              Check with Timber City re: availability of Supawood 16mm White.
+            </div>
+          </div>
+
+          <!-- Meta -->
+          <div style="font-size:10px; color:#9ca3af; padding-top:8px; border-top:1px solid #f3f4f6;">
+            Created May 25, 2026 · 01SMITH-01KIT
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:20px;">
+  <h3>Mobile behavior</h3>
+  <ul style="font-size:14px; line-height:1.8; color:#555;">
+    <li><strong>Open:</strong> Tap a task card → panel slides up from bottom (max 75% screen height)</li>
+    <li><strong>Close:</strong> Tap ✕, tap backdrop, swipe down on drag handle, or press back</li>
+    <li><strong>Scroll:</strong> Panel body scrolls independently if content overflows</li>
+    <li><strong>Same fields:</strong> Title, due date, assignee, notes — all editable, auto-save</li>
+  </ul>
+</div>

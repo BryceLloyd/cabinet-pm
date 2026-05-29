@@ -6,6 +6,8 @@ import { BottomTabBar } from "@/components/bottom-tab-bar";
 import { PageTitle } from "@/components/page-title";
 import { MobileFab } from "@/components/mobile-fab";
 import { DensityProvider } from "@/components/density-provider";
+import { NotificationBell } from "@/components/notifications/notification-bell";
+import { ServiceWorkerRegister } from "@/components/notifications/sw-register";
 
 const NAV = [
   { href: "/dashboard" as const, label: "Dashboard" },
@@ -73,6 +75,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
                 </Link>
               ))}
             </nav>
+            <NotificationBell userId={user.id} />
             <UserMenu
               fullName={profile.full_name}
               email={user.email || ""}
@@ -89,6 +92,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
       </main>
       <BottomTabBar />
       <MobileFab />
+      <ServiceWorkerRegister />
     </div>
   );
 }

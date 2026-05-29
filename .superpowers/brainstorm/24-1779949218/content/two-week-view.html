@@ -1,0 +1,147 @@
+<h2>Calendar — 2-Week View</h2>
+<p class="subtitle">New view toggle alongside Gantt | Calendar | Events. Shows current Mon–Sun + next Mon–Sun with navigable arrows.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Desktop — 2-Week View</div>
+  <div class="mockup-body" style="background:#fff; padding:0; overflow:hidden;">
+
+    <!-- Top controls bar -->
+    <div style="padding:12px 20px; border-bottom:1px solid #e5e7eb; display:flex; align-items:center; justify-content:space-between; background:#fafafa;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <!-- Nav arrows -->
+        <button style="width:28px; height:28px; border:1px solid #e5e7eb; border-radius:6px; background:#fff; cursor:pointer; display:grid; place-items:center; font-size:14px; color:#374151;">‹</button>
+        <span style="font-size:14px; font-weight:600; color:#111;">26 May — 8 Jun 2026</span>
+        <button style="width:28px; height:28px; border:1px solid #e5e7eb; border-radius:6px; background:#fff; cursor:pointer; display:grid; place-items:center; font-size:14px; color:#374151;">›</button>
+        <button style="padding:4px 10px; border:1px solid #e5e7eb; border-radius:6px; background:#fff; font-size:11px; color:#374151; cursor:pointer; font-weight:500;">Today</button>
+      </div>
+      <!-- View toggles -->
+      <div style="display:flex; border:1px solid #e5e7eb; border-radius:6px; overflow:hidden; font-size:12px;">
+        <button style="padding:5px 12px; background:#fff; border:none; color:#6b7280; cursor:pointer;">Gantt</button>
+        <button style="padding:5px 12px; background:#fff; border:none; border-left:1px solid #e5e7eb; color:#6b7280; cursor:pointer;">Calendar</button>
+        <button style="padding:5px 12px; background:#111; border:none; color:#fff; cursor:pointer; font-weight:500;">2 Week</button>
+        <button style="padding:5px 12px; background:#fff; border:none; border-left:1px solid #e5e7eb; color:#6b7280; cursor:pointer;">Events</button>
+      </div>
+    </div>
+
+    <!-- 2-week grid -->
+    <div style="padding:16px 20px;">
+
+      <!-- Week 1 header -->
+      <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; margin-bottom:8px;">This Week</div>
+
+      <!-- Day columns - Week 1 -->
+      <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:8px; margin-bottom:20px;">
+
+        <!-- Mon 26 -->
+        <div style="border:1px solid #e5e7eb; border-radius:8px; min-height:110px; padding:8px; background:#fff;">
+          <div style="font-size:11px; color:#6b7280; margin-bottom:2px;">Mon</div>
+          <div style="font-size:15px; font-weight:600; color:#111; margin-bottom:8px;">26</div>
+        </div>
+
+        <!-- Tue 27 -->
+        <div style="border:1px solid #e5e7eb; border-radius:8px; min-height:110px; padding:8px; background:#fff;">
+          <div style="font-size:11px; color:#6b7280; margin-bottom:2px;">Tue</div>
+          <div style="font-size:15px; font-weight:600; color:#111; margin-bottom:8px;">27</div>
+          <div style="padding:3px 6px; background:#fef3c7; border-left:2px solid #f59e0b; border-radius:3px; font-size:10px; color:#92400e; margin-bottom:4px; cursor:pointer;">Supplier call</div>
+        </div>
+
+        <!-- Wed 28 (today) -->
+        <div style="border:2px solid #2d6a1f; border-radius:8px; min-height:110px; padding:8px; background:#f0fdf4;">
+          <div style="font-size:11px; color:#2d6a1f; font-weight:600; margin-bottom:2px;">Wed</div>
+          <div style="font-size:15px; font-weight:700; color:#2d6a1f; margin-bottom:8px; display:flex; align-items:center; gap:4px;">28 <span style="font-size:9px; font-weight:500; background:#2d6a1f; color:#fff; padding:1px 5px; border-radius:3px;">TODAY</span></div>
+          <div style="padding:3px 6px; background:#dbeafe; border-left:2px solid #3b82f6; border-radius:3px; font-size:10px; color:#1e40af; margin-bottom:4px; cursor:pointer;">Smith measure</div>
+          <div style="padding:3px 6px; background:#fce7f3; border-left:2px solid #ec4899; border-radius:3px; font-size:10px; color:#9d174d; cursor:pointer;">Team meeting</div>
+        </div>
+
+        <!-- Thu 29 -->
+        <div style="border:1px solid #e5e7eb; border-radius:8px; min-height:110px; padding:8px; background:#fff;">
+          <div style="font-size:11px; color:#6b7280; margin-bottom:2px;">Thu</div>
+          <div style="font-size:15px; font-weight:600; color:#111; margin-bottom:8px;">29</div>
+        </div>
+
+        <!-- Fri 30 -->
+        <div style="border:1px solid #e5e7eb; border-radius:8px; min-height:110px; padding:8px; background:#fff;">
+          <div style="font-size:11px; color:#6b7280; margin-bottom:2px;">Fri</div>
+          <div style="font-size:15px; font-weight:600; color:#111; margin-bottom:8px;">30</div>
+          <div style="padding:3px 6px; background:#fee2e2; border-left:2px solid #ef4444; border-radius:3px; font-size:10px; color:#991b1b; cursor:pointer;">Delivery — Jones</div>
+        </div>
+
+        <!-- Sat 31 -->
+        <div style="border:1px solid #f3f4f6; border-radius:8px; min-height:110px; padding:8px; background:#fafafa;">
+          <div style="font-size:11px; color:#9ca3af; margin-bottom:2px;">Sat</div>
+          <div style="font-size:15px; font-weight:500; color:#9ca3af; margin-bottom:8px;">31</div>
+        </div>
+
+        <!-- Sun 1 -->
+        <div style="border:1px solid #f3f4f6; border-radius:8px; min-height:110px; padding:8px; background:#fafafa;">
+          <div style="font-size:11px; color:#9ca3af; margin-bottom:2px;">Sun</div>
+          <div style="font-size:15px; font-weight:500; color:#9ca3af; margin-bottom:8px;">1</div>
+        </div>
+      </div>
+
+      <!-- Week 2 header -->
+      <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; margin-bottom:8px;">Next Week</div>
+
+      <!-- Day columns - Week 2 -->
+      <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:8px;">
+
+        <!-- Mon 2 -->
+        <div style="border:1px solid #e5e7eb; border-radius:8px; min-height:110px; padding:8px; background:#fff;">
+          <div style="font-size:11px; color:#6b7280; margin-bottom:2px;">Mon</div>
+          <div style="font-size:15px; font-weight:600; color:#111; margin-bottom:8px;">2</div>
+          <div style="padding:3px 6px; background:#e0e7ff; border-left:2px solid #6366f1; border-radius:3px; font-size:10px; color:#3730a3; cursor:pointer;">Install — Patel</div>
+        </div>
+
+        <!-- Tue 3 -->
+        <div style="border:1px solid #e5e7eb; border-radius:8px; min-height:110px; padding:8px; background:#fff;">
+          <div style="font-size:11px; color:#6b7280; margin-bottom:2px;">Tue</div>
+          <div style="font-size:15px; font-weight:600; color:#111; margin-bottom:8px;">3</div>
+        </div>
+
+        <!-- Wed 4 -->
+        <div style="border:1px solid #e5e7eb; border-radius:8px; min-height:110px; padding:8px; background:#fff;">
+          <div style="font-size:11px; color:#6b7280; margin-bottom:2px;">Wed</div>
+          <div style="font-size:15px; font-weight:600; color:#111; margin-bottom:8px;">4</div>
+          <div style="padding:3px 6px; background:#fef3c7; border-left:2px solid #f59e0b; border-radius:3px; font-size:10px; color:#92400e; cursor:pointer;">Quote review</div>
+        </div>
+
+        <!-- Thu 5 -->
+        <div style="border:1px solid #e5e7eb; border-radius:8px; min-height:110px; padding:8px; background:#fff;">
+          <div style="font-size:11px; color:#6b7280; margin-bottom:2px;">Thu</div>
+          <div style="font-size:15px; font-weight:600; color:#111; margin-bottom:8px;">5</div>
+        </div>
+
+        <!-- Fri 6 -->
+        <div style="border:1px solid #e5e7eb; border-radius:8px; min-height:110px; padding:8px; background:#fff;">
+          <div style="font-size:11px; color:#6b7280; margin-bottom:2px;">Fri</div>
+          <div style="font-size:15px; font-weight:600; color:#111; margin-bottom:8px;">6</div>
+        </div>
+
+        <!-- Sat 7 -->
+        <div style="border:1px solid #f3f4f6; border-radius:8px; min-height:110px; padding:8px; background:#fafafa;">
+          <div style="font-size:11px; color:#9ca3af; margin-bottom:2px;">Sat</div>
+          <div style="font-size:15px; font-weight:500; color:#9ca3af;">7</div>
+        </div>
+
+        <!-- Sun 8 -->
+        <div style="border:1px solid #f3f4f6; border-radius:8px; min-height:110px; padding:8px; background:#fafafa;">
+          <div style="font-size:11px; color:#9ca3af; margin-bottom:2px;">Sun</div>
+          <div style="font-size:15px; font-weight:500; color:#9ca3af;">8</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:20px;">
+  <h3>Behavior</h3>
+  <ul style="font-size:14px; line-height:1.8; color:#555;">
+    <li><strong>View toggle:</strong> Gantt | Calendar | 2 Week | Events — "2 Week" is the new option</li>
+    <li><strong>Navigation:</strong> ‹/› arrows shift by 1 week at a time. "Today" button jumps back to current fortnight.</li>
+    <li><strong>Today highlight:</strong> Green border + "TODAY" badge on current day</li>
+    <li><strong>Weekends:</strong> Muted background to de-emphasize</li>
+    <li><strong>Events:</strong> Color-coded by event type (left border + tinted background). Click → opens event slide panel.</li>
+    <li><strong>Click empty day:</strong> Opens quick-add event modal (same as existing calendar behavior)</li>
+    <li><strong>Mobile:</strong> Stacks to a single-column list of days with events underneath each</li>
+  </ul>
+</div>

@@ -1,0 +1,134 @@
+<h2>Events List — Third View Toggle</h2>
+<p class="subtitle">Gantt | Calendar | Events — a chronological card list of all events for the selected year.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Desktop — Events List View</div>
+  <div class="mockup-body" style="background:#fff; padding:0; overflow:hidden;">
+
+    <!-- Top controls bar -->
+    <div style="padding:12px 20px; border-bottom:1px solid #e5e7eb; display:flex; align-items:center; justify-content:space-between; background:#fafafa;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button style="width:28px; height:28px; border:1px solid #e5e7eb; border-radius:6px; background:#fff; cursor:pointer; display:grid; place-items:center; font-size:14px; color:#374151;">‹</button>
+        <span style="font-size:14px; font-weight:600; color:#111;">2026</span>
+        <button style="width:28px; height:28px; border:1px solid #e5e7eb; border-radius:6px; background:#fff; cursor:pointer; display:grid; place-items:center; font-size:14px; color:#374151;">›</button>
+        <button style="padding:4px 10px; border:1px solid #e5e7eb; border-radius:6px; background:#fff; font-size:11px; color:#374151; cursor:pointer; font-weight:500;">Today</button>
+      </div>
+      <!-- View toggles -->
+      <div style="display:flex; border:1px solid #e5e7eb; border-radius:6px; overflow:hidden; font-size:12px;">
+        <button style="padding:5px 12px; background:#fff; border:none; color:#6b7280; cursor:pointer;">Gantt</button>
+        <button style="padding:5px 12px; background:#fff; border:none; border-left:1px solid #e5e7eb; color:#6b7280; cursor:pointer;">Calendar</button>
+        <button style="padding:5px 12px; background:#111; border:none; color:#fff; cursor:pointer; font-weight:500;">Events</button>
+      </div>
+    </div>
+
+    <!-- Events list body -->
+    <div style="padding:20px; max-width:720px;">
+
+      <!-- Month group: May -->
+      <div style="margin-bottom:24px;">
+        <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#6b7280; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #f3f4f6;">May 2026</div>
+
+        <!-- Event card -->
+        <div style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; border:1px solid #e5e7eb; border-radius:8px; margin-bottom:8px; cursor:pointer; transition:background 0.15s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">
+          <div style="width:10px; height:10px; border-radius:50%; background:#3b82f6; margin-top:4px; flex-shrink:0;"></div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:14px; font-weight:500; color:#111;">Smith site measure</div>
+            <div style="font-size:12px; color:#6b7280; margin-top:2px;">01SMITH — Kitchen</div>
+          </div>
+          <div style="text-align:right; flex-shrink:0;">
+            <div style="font-size:13px; font-weight:500; color:#111;">Wed 28</div>
+            <div style="display:inline-block; padding:1px 6px; background:#dbeafe; border-radius:3px; font-size:10px; color:#1e40af; margin-top:2px;">Measure</div>
+          </div>
+        </div>
+
+        <!-- Event card -->
+        <div style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; border:1px solid #e5e7eb; border-radius:8px; margin-bottom:8px; cursor:pointer; transition:background 0.15s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">
+          <div style="width:10px; height:10px; border-radius:50%; background:#ef4444; margin-top:4px; flex-shrink:0;"></div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:14px; font-weight:500; color:#111;">Delivery — Jones bathroom</div>
+            <div style="font-size:12px; color:#6b7280; margin-top:2px;">02JONES — Bathroom</div>
+          </div>
+          <div style="text-align:right; flex-shrink:0;">
+            <div style="font-size:13px; font-weight:500; color:#111;">Fri 30</div>
+            <div style="display:inline-block; padding:1px 6px; background:#fee2e2; border-radius:3px; font-size:10px; color:#991b1b; margin-top:2px;">Delivery</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Month group: June -->
+      <div style="margin-bottom:24px;">
+        <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#6b7280; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #f3f4f6;">June 2026</div>
+
+        <!-- Event card -->
+        <div style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; border:1px solid #e5e7eb; border-radius:8px; margin-bottom:8px; cursor:pointer; transition:background 0.15s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">
+          <div style="width:10px; height:10px; border-radius:50%; background:#6366f1; margin-top:4px; flex-shrink:0;"></div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:14px; font-weight:500; color:#111;">Install — Patel kitchen</div>
+            <div style="font-size:12px; color:#6b7280; margin-top:2px;">03PATEL — Kitchen</div>
+          </div>
+          <div style="text-align:right; flex-shrink:0;">
+            <div style="font-size:13px; font-weight:500; color:#111;">Mon 2</div>
+            <div style="display:inline-block; padding:1px 6px; background:#e0e7ff; border-radius:3px; font-size:10px; color:#3730a3; margin-top:2px;">Installation</div>
+          </div>
+        </div>
+
+        <!-- Event card -->
+        <div style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; border:1px solid #e5e7eb; border-radius:8px; margin-bottom:8px; cursor:pointer; transition:background 0.15s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">
+          <div style="width:10px; height:10px; border-radius:50%; background:#f59e0b; margin-top:4px; flex-shrink:0;"></div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:14px; font-weight:500; color:#111;">Quote review — Williams</div>
+            <div style="font-size:12px; color:#6b7280; margin-top:2px;">04WILLIAMS</div>
+          </div>
+          <div style="text-align:right; flex-shrink:0;">
+            <div style="font-size:13px; font-weight:500; color:#111;">Wed 4</div>
+            <div style="display:inline-block; padding:1px 6px; background:#fef3c7; border-radius:3px; font-size:10px; color:#92400e; margin-top:2px;">Meeting</div>
+          </div>
+        </div>
+
+        <!-- Event card -->
+        <div style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; border:1px solid #e5e7eb; border-radius:8px; margin-bottom:8px; cursor:pointer; transition:background 0.15s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">
+          <div style="width:10px; height:10px; border-radius:50%; background:#e85d04; margin-top:4px; flex-shrink:0;"></div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:14px; font-weight:500; color:#111;">Delivery — Smith kitchen</div>
+            <div style="font-size:12px; color:#6b7280; margin-top:2px;">01SMITH — Kitchen</div>
+          </div>
+          <div style="text-align:right; flex-shrink:0;">
+            <div style="font-size:13px; font-weight:500; color:#111;">Wed 10</div>
+            <div style="display:inline-block; padding:1px 6px; background:#ffedd5; border-radius:3px; font-size:10px; color:#9a3412; margin-top:2px;">Delivery</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Month group: July (fewer events) -->
+      <div style="margin-bottom:24px;">
+        <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#6b7280; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #f3f4f6;">July 2026</div>
+
+        <div style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; border:1px solid #e5e7eb; border-radius:8px; margin-bottom:8px; cursor:pointer; transition:background 0.15s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">
+          <div style="width:10px; height:10px; border-radius:50%; background:#3b82f6; margin-top:4px; flex-shrink:0;"></div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:14px; font-weight:500; color:#111;">Site measure — Adams extension</div>
+            <div style="font-size:12px; color:#6b7280; margin-top:2px;">05ADAMS — Kitchen</div>
+          </div>
+          <div style="text-align:right; flex-shrink:0;">
+            <div style="font-size:13px; font-weight:500; color:#111;">Thu 9</div>
+            <div style="display:inline-block; padding:1px 6px; background:#dbeafe; border-radius:3px; font-size:10px; color:#1e40af; margin-top:2px;">Measure</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:20px;">
+  <h3>Behavior</h3>
+  <ul style="font-size:14px; line-height:1.8; color:#555;">
+    <li><strong>Grouped by month</strong> — chronological, scrollable list for the selected year</li>
+    <li><strong>Each card shows:</strong> event type color dot, title, project/room, date, event type badge</li>
+    <li><strong>Click a card</strong> → opens event slide panel (same as calendar)</li>
+    <li><strong>Year navigation:</strong> Same ‹ 2026 › controls as other views</li>
+    <li><strong>Auto-scroll:</strong> On load, scrolls to the current month</li>
+    <li><strong>Empty months:</strong> Skipped entirely (no empty "No events" sections)</li>
+    <li><strong>Mobile:</strong> Same card layout, full width — already works as a single column</li>
+  </ul>
+</div>

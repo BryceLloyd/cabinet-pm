@@ -1,0 +1,123 @@
+<h2>Project detail — rooms with groups</h2>
+<p class="subtitle">Collapsible sections per room group, ungrouped rooms at bottom</p>
+
+<div class="mockup">
+  <div class="mockup-header">Project: Smith Kitchen Renovation</div>
+  <div class="mockup-body" style="padding: 0; background: var(--bg); font-size: 13px;">
+
+    <!-- Project header -->
+    <div style="padding: 16px 20px; border-bottom: 1px solid var(--border);">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div style="font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;">Client</div>
+          <div style="font-weight: 600;">John Smith</div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 11px; color: var(--muted);">Completion</div>
+          <div style="font-weight: 500;">15 Jul 2026</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rooms panel -->
+    <div style="padding: 12px 20px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <div style="font-weight: 600; font-size: 14px;">Rooms</div>
+        <div style="display: flex; gap: 6px;">
+          <button style="font-size: 11px; padding: 4px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); cursor: pointer;">+ Add group</button>
+          <button style="font-size: 11px; padding: 4px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); cursor: pointer;">+ Add room</button>
+        </div>
+      </div>
+
+      <!-- Group 1: Kitchen Install -->
+      <div style="border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; overflow: hidden;">
+        <div style="padding: 10px 14px; background: var(--surface); display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 1px solid var(--border);">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 12px; color: var(--muted);">▼</span>
+            <span style="font-weight: 600; font-size: 13px;">Kitchen Install</span>
+            <span style="font-size: 11px; color: var(--muted); background: var(--bg); padding: 1px 6px; border-radius: 4px;">3 rooms</span>
+          </div>
+          <span style="font-size: 11px; color: var(--muted);">⋯</span>
+        </div>
+        <!-- Room rows -->
+        <div style="padding: 8px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border);">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: #3b82f6;"></span>
+            <span>Kitchen</span>
+          </div>
+          <span style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #3b82f620; color: #3b82f6; border: 1px solid #3b82f640;">Production</span>
+        </div>
+        <div style="padding: 8px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border);">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: #3b82f6;"></span>
+            <span>Scullery</span>
+          </div>
+          <span style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #3b82f620; color: #3b82f6; border: 1px solid #3b82f640;">Production</span>
+        </div>
+        <div style="padding: 8px 14px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: #22c55e;"></span>
+            <span>Pantry</span>
+          </div>
+          <span style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #22c55e20; color: #22c55e; border: 1px solid #22c55e40;">Design</span>
+        </div>
+      </div>
+
+      <!-- Group 2: Bedroom Install -->
+      <div style="border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; overflow: hidden;">
+        <div style="padding: 10px 14px; background: var(--surface); display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 1px solid var(--border);">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 12px; color: var(--muted);">▼</span>
+            <span style="font-weight: 600; font-size: 13px;">Bedroom Install</span>
+            <span style="font-size: 11px; color: var(--muted); background: var(--bg); padding: 1px 6px; border-radius: 4px;">2 rooms</span>
+          </div>
+          <span style="font-size: 11px; color: var(--muted);">⋯</span>
+        </div>
+        <div style="padding: 8px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border);">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: #f59e0b;"></span>
+            <span>Main Bedroom</span>
+          </div>
+          <span style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #f59e0b20; color: #f59e0b; border: 1px solid #f59e0b40;">Quote</span>
+        </div>
+        <div style="padding: 8px 14px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: #f59e0b;"></span>
+            <span>En-suite</span>
+          </div>
+          <span style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #f59e0b20; color: #f59e0b; border: 1px solid #f59e0b40;">Quote</span>
+        </div>
+      </div>
+
+      <!-- Ungrouped -->
+      <div style="border: 1px solid var(--border); border-radius: 8px; overflow: hidden; opacity: 0.8;">
+        <div style="padding: 10px 14px; background: var(--surface); display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 1px solid var(--border);">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 12px; color: var(--muted);">▼</span>
+            <span style="font-weight: 500; font-size: 13px; color: var(--muted);">Ungrouped</span>
+            <span style="font-size: 11px; color: var(--muted); background: var(--bg); padding: 1px 6px; border-radius: 4px;">1 room</span>
+          </div>
+        </div>
+        <div style="padding: 8px 14px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: #94a3b8;"></span>
+            <span>Garage Shelving</span>
+          </div>
+          <span style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #94a3b820; color: #94a3b8; border: 1px solid #94a3b840;">Quote</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div style="margin-top: 20px;">
+  <h3>Key interactions</h3>
+  <ul style="font-size: 13px; line-height: 1.8; color: var(--muted);">
+    <li><strong>Click group header</strong> — collapse/expand rooms</li>
+    <li><strong>⋯ menu on group</strong> — rename, add room to group, delete group (rooms become ungrouped)</li>
+    <li><strong>+ Add group</strong> — creates empty group, then drag rooms in or use ⋯ menu</li>
+    <li><strong>+ Add room</strong> — creates room in selected group (or ungrouped if none)</li>
+    <li><strong>Drag rooms</strong> — reorder within group or move between groups (uses existing @dnd-kit)</li>
+  </ul>
+</div>
