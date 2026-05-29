@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { format } from "date-fns";
+import { Trash2 } from "lucide-react";
 import { SlidePanel } from "@/components/ui/slide-panel";
 
 interface TaskRow {
@@ -61,6 +62,7 @@ export function TaskDetailPanel({
   const [roomGroupId, setRoomGroupId] = useState("");
   const [roomId, setRoomId] = useState("");
   const [taskTypeId, setTaskTypeId] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [roomGroups, setRoomGroups] = useState<{ id: string; name: string }[]>([]);
@@ -76,6 +78,7 @@ export function TaskDetailPanel({
     setRoomGroupId(task.room_group_id || "");
     setRoomId(task.room_id || "");
     setTaskTypeId(task.task_type_id || "");
+    setShowDeleteConfirm(false);
   }, [task?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load room groups and rooms when task has a project
@@ -166,7 +169,7 @@ export function TaskDetailPanel({
       open={!!task}
       onClose={onClose}
       title="Task Detail"
-      onDelete={handleDelete}
+      showClose={false}
     >
       {/* Title */}
       <div className="mb-5">
@@ -180,16 +183,6 @@ export function TaskDetailPanel({
           className="w-full text-[15px] font-medium bg-transparent border border-transparent hover:border-border focus:border-border rounded px-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-ring"
         />
       </div>
-
-      {/* Complete button – open tasks only */}
-      {!task.completed_at && (
-        <button
-          onClick={() => onToggleComplete(task)}
-          className="w-full h-9 rounded-md text-sm font-medium mb-5 bg-primary text-primary-foreground hover:opacity-90 transition-colors"
-        >
-          Complete
-        </button>
-      )}
 
       {/* Task type */}
       {taskTypes.length > 0 && (
@@ -319,6 +312,56 @@ export function TaskDetailPanel({
         {task.completed_at && (
           <div>Completed {format(new Date(task.completed_at), "MMM d, yyyy")}{task.completer?.full_name ? ` by ${task.completer.full_name}` : ""}</div>
         )}
+      </div>
+
+      {/* Bottom actions */}
+      <div className="mt-6 space-y-3">
+        {/* Delete with inline confirmation */}
+        <div className="flex justify-center">
+          {showDeleteConfirm ? (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">Delete this task?</span>
+              <button
+                onClick={handleDelete}
+                className="px-3 h-7 rounded-md bg-destructive text-destructive-foreground text-xs font-medium hover:opacity-90"
+              >
+                Yes, delete
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-3 h-7 rounded-md border text-xs font-medium hover:bg-muted"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors"
+            >
+              <Trash2 size={12} />
+              Delete task
+            </button>
+          )}
+        </div>
+
+        {/* Complete button – open tasks only */}
+        {!task.completed_at && (
+          <button
+            onClick={() => onToggleComplete(task)}
+            className="w-full h-9 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 transition-colors"
+          >
+            Complete
+          </button>
+        )}
+
+        {/* Done button – closes the panel */}
+        <button
+          onClick={onClose}
+          className="w-full h-9 rounded-md text-sm font-medium border hover:bg-muted transition-colors"
+        >
+          Done
+        </button>
       </div>
     </SlidePanel>
   );

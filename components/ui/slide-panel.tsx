@@ -8,10 +8,12 @@ interface SlidePanelProps {
   onClose: () => void;
   title: string;
   onDelete?: () => void;
+  /** Hide the header close (X) button. Backdrop click, Escape, and drag-to-dismiss still work. */
+  showClose?: boolean;
   children: React.ReactNode;
 }
 
-export function SlidePanel({ open, onClose, title, onDelete, children }: SlidePanelProps) {
+export function SlidePanel({ open, onClose, title, onDelete, showClose = true, children }: SlidePanelProps) {
   const [isMobile, setIsMobile] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -141,22 +143,26 @@ export function SlidePanel({ open, onClose, title, onDelete, children }: SlidePa
           {/* Header */}
           <div className="px-4 pb-3 pt-1 border-b flex items-center justify-between">
             <span className="text-sm font-semibold">{title}</span>
-            <div className="flex items-center gap-2">
-              {onDelete && (
-                <button
-                  onClick={handleDelete}
-                  className="h-7 w-7 rounded-md border grid place-items-center text-destructive hover:bg-destructive/10"
-                >
-                  <Trash2 size={13} />
-                </button>
-              )}
-              <button
-                onClick={onClose}
-                className="h-7 w-7 rounded-md border grid place-items-center text-muted-foreground hover:text-foreground"
-              >
-                <X size={14} />
-              </button>
-            </div>
+            {(onDelete || showClose) && (
+              <div className="flex items-center gap-2">
+                {onDelete && (
+                  <button
+                    onClick={handleDelete}
+                    className="h-7 w-7 rounded-md border grid place-items-center text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
+                {showClose && (
+                  <button
+                    onClick={onClose}
+                    className="h-7 w-7 rounded-md border grid place-items-center text-muted-foreground hover:text-foreground"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Scrollable body */}
@@ -173,22 +179,26 @@ export function SlidePanel({ open, onClose, title, onDelete, children }: SlidePa
           {/* Header */}
           <div className="px-5 py-4 border-b flex items-center justify-between shrink-0">
             <span className="text-sm font-semibold">{title}</span>
-            <div className="flex items-center gap-2">
-              {onDelete && (
-                <button
-                  onClick={handleDelete}
-                  className="h-7 w-7 rounded-md border grid place-items-center text-destructive hover:bg-destructive/10"
-                >
-                  <Trash2 size={13} />
-                </button>
-              )}
-              <button
-                onClick={onClose}
-                className="h-7 w-7 rounded-md border grid place-items-center text-muted-foreground hover:text-foreground"
-              >
-                <X size={14} />
-              </button>
-            </div>
+            {(onDelete || showClose) && (
+              <div className="flex items-center gap-2">
+                {onDelete && (
+                  <button
+                    onClick={handleDelete}
+                    className="h-7 w-7 rounded-md border grid place-items-center text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
+                {showClose && (
+                  <button
+                    onClick={onClose}
+                    className="h-7 w-7 rounded-md border grid place-items-center text-muted-foreground hover:text-foreground"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Scrollable body */}
