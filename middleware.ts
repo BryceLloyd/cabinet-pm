@@ -39,5 +39,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next|favicon.ico|auth/callback|manifest.json|icon).*)"],
+  matcher: ["/((?!_next|favicon.ico|auth/callback|manifest.json|icon|sw\\.js).*)"],
 };
