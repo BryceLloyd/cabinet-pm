@@ -86,19 +86,19 @@ export function EventsListView({
   }
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-4 max-w-3xl">
       {monthGroups.map((group) => (
         <div
           key={group.key}
           ref={group.key === currentMonthKey ? currentMonthRef : undefined}
         >
           {/* Month header */}
-          <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 pb-2 border-b">
+          <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 pb-1.5 border-b">
             {group.label}
           </div>
 
           {/* Event cards */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {group.events.map((ev) => {
               const et = ev.event_type_id ? eventTypeMap.get(ev.event_type_id) : null;
               const color = et?.color || "#94a3b8";
@@ -109,7 +109,7 @@ export function EventsListView({
               return (
                 <div
                   key={ev.id}
-                  className="flex items-start gap-3 px-4 py-3 border rounded-lg bg-card cursor-pointer hover:bg-muted/30 transition-colors"
+                  className="flex items-start gap-2 px-3 py-2 border rounded-lg bg-card cursor-pointer hover:bg-muted/30 transition-colors"
                   onClick={() => setSelectedEvent(ev)}
                 >
                   {/* Color dot */}

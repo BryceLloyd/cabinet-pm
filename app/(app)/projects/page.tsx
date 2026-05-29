@@ -59,15 +59,15 @@ export default async function ProjectsPage() {
       </div>
 
       {/* Mobile cards */}
-      <div className="md:hidden space-y-3">
+      <div className="md:hidden space-y-1.5">
         {(projects || []).length === 0 && (
           <div className="rounded-lg border bg-card px-4 py-12 text-center text-sm text-muted-foreground">No projects yet.</div>
         )}
         {(projects || []).map((p: any) => {
           const status = displayStatus(p.status);
           return (
-            <Link key={p.id} href={`/projects/${p.id}`} className="block rounded-lg border bg-card p-4 hover:bg-muted/30 transition-colors">
-              <div className="flex items-start justify-between gap-2 mb-2">
+            <Link key={p.id} href={`/projects/${p.id}`} className="block rounded-lg border bg-card px-3 py-2.5 hover:bg-muted/30 transition-colors">
+              <div className="flex items-start justify-between gap-2 mb-1">
                 <div className="font-medium text-sm">{p.name}</div>
                 <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
                   status === "Active"
