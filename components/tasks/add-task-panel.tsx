@@ -46,7 +46,7 @@ export function AddTaskPanel({
   const [roomGroupId, setRoomGroupId] = useState("");
   const [roomId, setRoomId] = useState("");
   const [taskTypeId, setTaskTypeId] = useState("");
-  const [assignee, setAssignee] = useState("");
+  const [assignee, setAssignee] = useState(userId);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -81,7 +81,7 @@ export function AddTaskPanel({
     setRoomGroupId("");
     setRoomId("");
     setTaskTypeId("");
-    setAssignee("");
+    setAssignee(userId);
     setNotes("");
   }
 
@@ -94,7 +94,6 @@ export function AddTaskPanel({
     if (!title.trim() || saving) return;
     setSaving(true);
 
-    const isPersonal = !projectId;
     const { data, error } = await supabase
       .from("tasks")
       .insert({
@@ -104,7 +103,7 @@ export function AddTaskPanel({
         room_group_id: roomGroupId || null,
         room_id: roomId || null,
         task_type_id: taskTypeId || null,
-        assigned_to: isPersonal ? userId : assignee || null,
+        assigned_to: assignee || null,
         due_date: dueDate || null,
         created_by: userId,
       })
@@ -244,7 +243,7 @@ export function AddTaskPanel({
           disabled={!projectId}
           className="w-full h-9 px-2 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <option value="">{projectId ? "Unassigned" : "Assigned to you"}</option>
+          <option value="">Unassigned</option>
           {profiles.map((p) => (
             <option key={p.id} value={p.id}>{p.full_name}</option>
           ))}

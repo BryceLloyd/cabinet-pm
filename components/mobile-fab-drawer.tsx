@@ -47,6 +47,9 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
   // Add room form state
   const [roomName, setRoomName] = useState("");
 
+  // Current user ID (for default assignment)
+  const [currentUserId, setCurrentUserId] = useState("");
+
   // Options loaded from Supabase
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
   const [profiles, setProfiles] = useState<{ id: string; full_name: string }[]>([]);
@@ -64,7 +67,7 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
       setTitle("");
       setRoomName("");
       setDueDate("");
-      setAssignee("");
+      setAssignee(currentUserId);
       setTaskProjectId(projectId || "");
       setTaskRoomGroupId("");
       setTaskRoomId("");
@@ -100,11 +103,15 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
         .select("id, name, color")
         .is("archived_at", null)
         .order("sort_order"),
-    ]).then(([{ data: p }, { data: pr }, { data: et }, { data: tt }]) => {
+      supabase.auth.getUser(),
+    ]).then(([{ data: p }, { data: pr }, { data: et }, { data: tt }, { data: { user } }]) => {
       setProjects(p || []);
       setProfiles(pr || []);
       setEventTypes(et || []);
       setTaskTypes(tt || []);
+      const uid = user?.id || "";
+      setCurrentUserId(uid);
+      setAssignee(uid);
       setOptionsLoaded(true);
     });
   }, [open, optionsLoaded, supabase]);
@@ -136,7 +143,6 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
     } = await supabase.auth.getUser();
     if (!user) { setSaving(false); return; }
 
-    const isPersonal = !taskProjectId;
     const { error } = await supabase.from("tasks").insert({
       title: title.trim(),
       description: taskNotes.trim() || null,
@@ -144,7 +150,7 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
       room_id: taskRoomId || null,
       room_group_id: taskRoomGroupId || null,
       task_type_id: taskTypeId || null,
-      assigned_to: isPersonal ? user.id : assignee || null,
+      assigned_to: assignee || null,
       due_date: dueDate || null,
       created_by: user.id,
     });
@@ -389,9 +395,7 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
                   className="w-full h-10 px-2 text-sm rounded-md border bg-background"
                   disabled={!taskProjectId}
                 >
-                  <option value="">
-                    {taskProjectId ? "Unassigned" : "Assigned to you"}
-                  </option>
+                  <option value="">Unassigned</option>
                   {profiles.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.full_name}
