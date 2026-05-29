@@ -12,9 +12,9 @@ Add in-app and web push notifications to Cabinet PM. Four notification types, pe
 | Type | Trigger | Recipients | Timing |
 |------|---------|------------|--------|
 | `task_assigned` | DB trigger on `tasks` INSERT/UPDATE when `assigned_to` is set/changed | The assignee (skip if assigner = assignee) | Immediate |
-| `task_due_today` | Vercel cron job | Each task's `assigned_to` where `due_date = today` and `completed_at IS NULL` | Daily at 6:00 AM SAST (04:00 UTC) |
+| `task_due_today` | Vercel cron job | Each task's `assigned_to` where `due_date = today` and `completed_at IS NULL` | Daily at 7:00 AM SAST (05:00 UTC) |
 | `phase_changed` | DB trigger on `rooms` UPDATE when `current_phase_id` changes | Project creator + all users with tasks in that room. Deduplicate per user per phase change. | Immediate |
-| `event_reminder` | Vercel cron job | Event creator (`created_by`) | Day-before: 4:00 PM SAST (14:00 UTC). Morning-of: 6:00 AM SAST (04:00 UTC) |
+| `event_reminder` | Vercel cron job | Event creator (`created_by`) | Day-before: 4:00 PM SAST (14:00 UTC). Morning-of: 7:00 AM SAST (05:00 UTC) |
 
 ## Channels
 
@@ -53,12 +53,12 @@ Both channels fire for every notification (if push is enabled). In-app is always
 ```json
 {
   "crons": [
-    { "path": "/api/cron/notifications", "schedule": "0 4,14 * * *" }
+    { "path": "/api/cron/notifications", "schedule": "0 5,14 * * *" }
   ]
 }
 ```
 
-- `0 4 * * *` = 6:00 AM SAST — task_due_today + event reminders for today
+- `0 5 * * *` = 7:00 AM SAST — task_due_today + event reminders for today
 - `0 14 * * *` = 4:00 PM SAST — event reminders for tomorrow
 
 The API route checks the current UTC hour to determine which notification types to process.
@@ -173,7 +173,7 @@ All enabled by default. Users toggle individual types off in preferences UI.
 
 - Auth: Vercel cron secret (`CRON_SECRET` env var, verified via `Authorization` header)
 - Checks current UTC hour to determine which types to process:
-  - Hour 4 (6 AM SAST): `task_due_today` + `event_reminder` for today
+  - Hour 5 (7 AM SAST): `task_due_today` + `event_reminder` for today
   - Hour 14 (4 PM SAST): `event_reminder` for tomorrow
 - Uses Supabase service role client (bypasses RLS) to query tasks/events and insert notifications
 - Sends push for each inserted notification
