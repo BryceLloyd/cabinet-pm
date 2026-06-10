@@ -2,12 +2,19 @@
 
 import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Project, Room, Task, Phase, Profile, ProjectStatus, RoomGroup, CalendarEvent, EventType } from "@/lib/types";
 import { RoomGroupManager } from "@/components/projects/room-group-manager";
 import { ProjectEventsSection } from "@/components/projects/project-events-section";
 import { ProjectPhasePlan } from "@/components/projects/project-phase-plan";
 import { format, addWeeks, differenceInCalendarWeeks } from "date-fns";
+
+interface TaskTypeOption {
+  id: string;
+  name: string;
+  color: string;
+}
 
 interface Props {
   project: Project;
@@ -18,6 +25,7 @@ interface Props {
   initialRoomGroups: RoomGroup[];
   initialEvents: CalendarEvent[];
   eventTypes: EventType[];
+  taskTypes: TaskTypeOption[];
 }
 
 const STATUSES: { value: ProjectStatus; label: string }[] = [
@@ -28,7 +36,7 @@ const STATUSES: { value: ProjectStatus; label: string }[] = [
   { value: "cancelled", label: "Cancelled" },
 ];
 
-export function ProjectDetailClient({ project: initialProject, initialRooms, initialTasks, phases, profiles, initialRoomGroups, initialEvents, eventTypes }: Props) {
+export function ProjectDetailClient({ project: initialProject, initialRooms, initialTasks, phases, profiles, initialRoomGroups, initialEvents, eventTypes, taskTypes }: Props) {
   const router = useRouter();
   const supabase = createClient();
   const [project, setProject] = useState(initialProject);
@@ -38,10 +46,16 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
   const [newRoomName, setNewRoomName] = useState("");
   const [editingRoom, setEditingRoom] = useState<string | null>(null);
   const [editRoomForm, setEditRoomForm] = useState({ name: "", notes: "" });
+  const [addingTask, setAddingTask] = useState(false);
+  const [savingTask, setSavingTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskRoom, setNewTaskRoom] = useState<string>("");
   const [newTaskAssignee, setNewTaskAssignee] = useState<string>("");
   const [newTaskRoomGroup, setNewTaskRoomGroup] = useState<string>("");
+  const [newTaskType, setNewTaskType] = useState<string>("");
+  const [newTaskDue, setNewTaskDue] = useState<string>("");
+
+  const taskTypeMap = new Map(taskTypes.map((t) => [t.id, t]));
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -113,10 +127,25 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
     }
   }
 
+  function resetTaskForm() {
+    setNewTaskTitle("");
+    setNewTaskRoom("");
+    setNewTaskRoomGroup("");
+    setNewTaskAssignee("");
+    setNewTaskType("");
+    setNewTaskDue("");
+  }
+
+  function cancelAddTask() {
+    resetTaskForm();
+    setAddingTask(false);
+  }
+
   async function addTask() {
-    if (!newTaskTitle.trim()) return;
+    if (!newTaskTitle.trim() || savingTask) return;
+    setSavingTask(true);
     const { data: user } = await supabase.auth.getUser();
-    if (!user.user) return;
+    if (!user.user) { setSavingTask(false); return; }
     const { data, error } = await supabase
       .from("tasks")
       .insert({
@@ -124,16 +153,24 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
         project_id: project.id,
         room_id: newTaskRoom || null,
         room_group_id: newTaskRoomGroup || null,
+        task_type_id: newTaskType || null,
         assigned_to: newTaskAssignee || null,
+        due_date: newTaskDue || null,
         created_by: user.user.id,
       })
       .select("*")
       .single();
+    setSavingTask(false);
     if (!error && data) {
       setTasks([data as Task, ...tasks]);
-      setNewTaskTitle("");
+      resetTaskForm();
+      setAddingTask(false);
     }
   }
+
+  const newTaskFilteredRooms = newTaskRoomGroup
+    ? rooms.filter((r) => r.room_group_id === newTaskRoomGroup)
+    : rooms;
 
   async function toggleTask(task: Task) {
     const { data: user } = await supabase.auth.getUser();
@@ -364,9 +401,117 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
 
       {/* Tasks */}
       <section className="rounded-lg border bg-card">
-        <div className="px-5 py-3.5 border-b">
+        <div className="px-5 py-3.5 border-b flex items-center justify-between">
           <h2 className="font-medium">Tasks</h2>
+          {!addingTask && (
+            <button
+              onClick={() => setAddingTask(true)}
+              className="h-7 px-2.5 inline-flex items-center gap-1 rounded-md border text-xs text-muted-foreground hover:text-foreground hover:bg-muted"
+            >
+              <Plus size={13} />
+              Add task
+            </button>
+          )}
         </div>
+
+        {/* Add task form */}
+        {addingTask && (
+          <div className="px-5 py-4 border-b space-y-3 bg-muted/30">
+            <input
+              autoFocus
+              value={newTaskTitle}
+              onChange={(e) => setNewTaskTitle(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") addTask(); }}
+              placeholder="What needs to be done?"
+              className="w-full h-9 px-3 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <div className="grid grid-cols-2 gap-2">
+              {taskTypes.length > 0 && (
+                <div>
+                  <label className="block text-[11px] text-muted-foreground mb-1">Type</label>
+                  <select
+                    value={newTaskType}
+                    onChange={(e) => setNewTaskType(e.target.value)}
+                    className="w-full h-8 px-2 rounded-md border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">No type</option>
+                    {taskTypes.map((tt) => (
+                      <option key={tt.id} value={tt.id}>{tt.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div>
+                <label className="block text-[11px] text-muted-foreground mb-1">Due date</label>
+                <input
+                  type="date"
+                  value={newTaskDue}
+                  onChange={(e) => setNewTaskDue(e.target.value)}
+                  className="w-full h-8 px-2 rounded-md border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              {roomGroups.length > 0 && (
+                <div>
+                  <label className="block text-[11px] text-muted-foreground mb-1">Room group</label>
+                  <select
+                    value={newTaskRoomGroup}
+                    onChange={(e) => { setNewTaskRoomGroup(e.target.value); setNewTaskRoom(""); }}
+                    className="w-full h-8 px-2 rounded-md border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">No group</option>
+                    {roomGroups.map((g) => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {newTaskFilteredRooms.length > 0 && (
+                <div>
+                  <label className="block text-[11px] text-muted-foreground mb-1">Room</label>
+                  <select
+                    value={newTaskRoom}
+                    onChange={(e) => setNewTaskRoom(e.target.value)}
+                    className="w-full h-8 px-2 rounded-md border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">No room</option>
+                    {newTaskFilteredRooms.map((r) => (
+                      <option key={r.id} value={r.id}>{r.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div>
+                <label className="block text-[11px] text-muted-foreground mb-1">Assignee</label>
+                <select
+                  value={newTaskAssignee}
+                  onChange={(e) => setNewTaskAssignee(e.target.value)}
+                  className="w-full h-8 px-2 rounded-md border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">Unassigned</option>
+                  {profiles.map((p) => (
+                    <option key={p.id} value={p.id}>{p.full_name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={cancelAddTask}
+                className="h-8 px-3 rounded-md border text-xs hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addTask}
+                disabled={savingTask || !newTaskTitle.trim()}
+                className="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 disabled:opacity-50"
+              >
+                {savingTask ? "Adding…" : "Add task"}
+              </button>
+            </div>
+          </div>
+        )}
+
         <ul className="divide-y max-h-[480px] overflow-y-auto">
           {tasks.length === 0 && (
             <li className="px-5 py-8 text-sm text-muted-foreground text-center">No tasks yet.</li>
@@ -384,8 +529,19 @@ export function ProjectDetailClient({ project: initialProject, initialRooms, ini
                   className="mt-1 size-4 rounded border-input cursor-pointer"
                 />
                 <div className="flex-1 min-w-0">
-                  <div className={`text-sm ${task.completed_at ? "line-through text-muted-foreground" : ""}`}>
-                    {task.title}
+                  <div className={`text-sm flex items-center gap-2 ${task.completed_at ? "line-through text-muted-foreground" : ""}`}>
+                    <span className="min-w-0 truncate">{task.title}</span>
+                    {task.task_type_id && (() => {
+                      const tt = taskTypeMap.get(task.task_type_id);
+                      return tt ? (
+                        <span
+                          className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0"
+                          style={{ backgroundColor: `${tt.color}20`, color: tt.color }}
+                        >
+                          {tt.name}
+                        </span>
+                      ) : null;
+                    })()}
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-2">
                     {task.room_group_id && (() => {

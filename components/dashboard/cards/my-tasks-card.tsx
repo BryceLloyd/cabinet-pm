@@ -12,6 +12,7 @@ interface TaskRow {
   project_id: string | null;
   projects: { name: string } | null;
   rooms: { name: string } | null;
+  task_types: { name: string; color: string } | null;
 }
 
 export default function MyTasksCard({ userId, onTaskClick }: CardProps) {
@@ -22,7 +23,7 @@ export default function MyTasksCard({ userId, onTaskClick }: CardProps) {
     const supabase = createClient();
     supabase
       .from("tasks")
-      .select("id, title, due_date, project_id, projects(name), rooms(name)")
+      .select("id, title, due_date, project_id, projects(name), rooms(name), task_types(name, color)")
       .eq("assigned_to", userId)
       .is("completed_at", null)
       .order("due_date", { ascending: true, nullsFirst: false })
@@ -47,7 +48,17 @@ export default function MyTasksCard({ userId, onTaskClick }: CardProps) {
         return (
           <li key={t.id} className="px-5 py-3 flex items-start gap-3 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onTaskClick?.(t.id)}>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium truncate">{t.title}</div>
+              <div className="text-sm font-medium flex items-center gap-2">
+                <span className="min-w-0 truncate">{t.title}</span>
+                {t.task_types && (
+                  <span
+                    className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0"
+                    style={{ backgroundColor: `${t.task_types.color}20`, color: t.task_types.color }}
+                  >
+                    {t.task_types.name}
+                  </span>
+                )}
+              </div>
               <div className="text-xs text-muted-foreground mt-0.5">
                 {t.projects?.name && <span>{t.projects.name}</span>}
                 {t.rooms?.name && <span> · {t.rooms.name}</span>}

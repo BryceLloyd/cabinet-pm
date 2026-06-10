@@ -17,6 +17,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     { data: roomGroups },
     { data: calendarEvents },
     { data: eventTypes },
+    { data: taskTypes },
   ] = await Promise.all([
     supabase.from("projects").select("*").eq("id", id).maybeSingle(),
     supabase.from("rooms").select("*").eq("project_id", id).order("sort_order"),
@@ -35,6 +36,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       .eq("project_id", id)
       .order("event_date"),
     supabase.from("event_types").select("*").is("archived_at", null).order("sort_order"),
+    supabase.from("task_types").select("id, name, color").is("archived_at", null).order("sort_order"),
   ]);
 
   if (!project) notFound();
@@ -54,6 +56,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         initialRoomGroups={roomGroups || []}
         initialEvents={(calendarEvents || []) as CalendarEvent[]}
         eventTypes={(eventTypes || []) as EventType[]}
+        taskTypes={taskTypes || []}
       />
     </div>
   );

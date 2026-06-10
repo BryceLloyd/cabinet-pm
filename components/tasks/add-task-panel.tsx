@@ -107,7 +107,7 @@ export function AddTaskPanel({
         due_date: dueDate || null,
         created_by: userId,
       })
-      .select("*, projects(name), rooms(name), room_groups(name), task_types(id,name,color), assignee:assigned_to(full_name), completer:completed_by(full_name)")
+      .select("*, projects(name), rooms(name), room_groups(name), task_types(id,name,color), assignee:assigned_to(full_name), completer:completed_by(full_name), task_checklist_items(id, completed_at)")
       .single();
 
     setSaving(false);

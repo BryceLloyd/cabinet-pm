@@ -3,8 +3,23 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { format } from "date-fns";
-import { Trash2 } from "lucide-react";
+import { Trash2, Plus, X } from "lucide-react";
 import { SlidePanel } from "@/components/ui/slide-panel";
+
+interface ChecklistSummaryItem {
+  id: string;
+  completed_at: string | null;
+}
+
+interface ChecklistItem {
+  id: string;
+  task_id: string;
+  title: string;
+  completed_at: string | null;
+  completed_by: string | null;
+  sort_order: number;
+  created_at: string;
+}
 
 interface TaskRow {
   id: string;
@@ -12,6 +27,7 @@ interface TaskRow {
   description: string | null;
   due_date: string | null;
   priority: number;
+  sort_order: number;
   project_id: string | null;
   room_id: string | null;
   room_group_id: string | null;
@@ -27,6 +43,7 @@ interface TaskRow {
   task_types: { id: string; name: string; color: string } | null;
   assignee: { full_name: string } | null;
   completer: { full_name: string } | null;
+  task_checklist_items: ChecklistSummaryItem[] | null;
 }
 
 interface ProfileOption {
@@ -40,19 +57,27 @@ interface TaskTypeOption {
   color: string;
 }
 
+interface TemplateOption {
+  id: string;
+  name: string;
+  items: string[];
+}
+
 interface TaskDetailPanelProps {
   task: TaskRow | null;
   profiles: ProfileOption[];
   taskTypes: TaskTypeOption[];
+  templates?: TemplateOption[];
   userId: string;
   onClose: () => void;
   onUpdated: (task: TaskRow) => void;
   onDeleted: (id: string) => void;
   onToggleComplete: (task: TaskRow) => void;
+  onChecklistChange?: (taskId: string, items: ChecklistSummaryItem[]) => void;
 }
 
 export function TaskDetailPanel({
-  task, profiles, taskTypes, userId, onClose, onUpdated, onDeleted, onToggleComplete,
+  task, profiles, taskTypes, templates = [], userId, onClose, onUpdated, onDeleted, onToggleComplete, onChecklistChange,
 }: TaskDetailPanelProps) {
   const supabase = createClient();
   const [title, setTitle] = useState("");
@@ -64,6 +89,10 @@ export function TaskDetailPanel({
   const [taskTypeId, setTaskTypeId] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
+  const [newItem, setNewItem] = useState("");
+  const [applyingTemplate, setApplyingTemplate] = useState(false);
 
   const [roomGroups, setRoomGroups] = useState<{ id: string; name: string }[]>([]);
   const [rooms, setRooms] = useState<{ id: string; name: string; room_group_id: string | null }[]>([]);
@@ -79,7 +108,23 @@ export function TaskDetailPanel({
     setRoomId(task.room_id || "");
     setTaskTypeId(task.task_type_id || "");
     setShowDeleteConfirm(false);
+    setNewItem("");
   }, [task?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load checklist items when task changes
+  useEffect(() => {
+    if (!task) {
+      setChecklist([]);
+      return;
+    }
+    supabase
+      .from("task_checklist_items")
+      .select("*")
+      .eq("task_id", task.id)
+      .order("sort_order")
+      .order("created_at")
+      .then(({ data }) => setChecklist((data as ChecklistItem[]) || []));
+  }, [task?.id, supabase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load room groups and rooms when task has a project
   useEffect(() => {
@@ -101,7 +146,73 @@ export function TaskDetailPanel({
     ? rooms.filter((r) => r.room_group_id === roomGroupId)
     : rooms;
 
-  const selectStr = "*, projects(name), rooms(name), room_groups(name), task_types(id,name,color), assignee:assigned_to(full_name), completer:completed_by(full_name)";
+  const selectStr = "*, projects(name), rooms(name), room_groups(name), task_types(id,name,color), assignee:assigned_to(full_name), completer:completed_by(full_name), task_checklist_items(id, completed_at)";
+
+  // Push checklist summary to parent so list badges stay in sync.
+  function syncChecklist(items: ChecklistItem[]) {
+    if (task) onChecklistChange?.(task.id, items.map((i) => ({ id: i.id, completed_at: i.completed_at })));
+  }
+
+  async function addChecklistItem() {
+    const title = newItem.trim();
+    if (!task || !title) return;
+    const sort = checklist.length ? Math.max(...checklist.map((i) => i.sort_order)) + 1 : 0;
+    const { data, error } = await supabase
+      .from("task_checklist_items")
+      .insert({ task_id: task.id, title, sort_order: sort })
+      .select("*")
+      .single();
+    if (!error && data) {
+      const next = [...checklist, data as ChecklistItem];
+      setChecklist(next);
+      syncChecklist(next);
+      setNewItem("");
+    }
+  }
+
+  async function toggleChecklistItem(item: ChecklistItem) {
+    const updates = item.completed_at
+      ? { completed_at: null, completed_by: null }
+      : { completed_at: new Date().toISOString(), completed_by: userId };
+    const { data, error } = await supabase
+      .from("task_checklist_items")
+      .update(updates)
+      .eq("id", item.id)
+      .select("*")
+      .single();
+    if (!error && data) {
+      const next = checklist.map((i) => (i.id === item.id ? (data as ChecklistItem) : i));
+      setChecklist(next);
+      syncChecklist(next);
+    }
+  }
+
+  async function deleteChecklistItem(id: string) {
+    const { error } = await supabase.from("task_checklist_items").delete().eq("id", id);
+    if (!error) {
+      const next = checklist.filter((i) => i.id !== id);
+      setChecklist(next);
+      syncChecklist(next);
+    }
+  }
+
+  async function applyTemplate(templateId: string) {
+    const tpl = templates.find((t) => t.id === templateId);
+    if (!task || !tpl || tpl.items.length === 0) return;
+    setApplyingTemplate(true);
+    const base = checklist.length ? Math.max(...checklist.map((i) => i.sort_order)) + 1 : 0;
+    const rows = tpl.items.map((title, i) => ({ task_id: task.id, title, sort_order: base + i }));
+    const { data, error } = await supabase
+      .from("task_checklist_items")
+      .insert(rows)
+      .select("*");
+    setApplyingTemplate(false);
+    if (!error && data) {
+      const next = [...checklist, ...(data as ChecklistItem[])];
+      setChecklist(next);
+      syncChecklist(next);
+    }
+  }
 
   // Auto-save with 800ms debounce
   const autoSave = useCallback(
@@ -303,6 +414,85 @@ export function TaskDetailPanel({
           rows={4}
           className="w-full px-3 py-2 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
         />
+      </div>
+
+      {/* Checklist */}
+      <div className="mb-5">
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Checklist
+            {checklist.length > 0 && (
+              <span className="ml-1.5 tabular-nums normal-case font-normal">
+                {checklist.filter((i) => i.completed_at).length}/{checklist.length}
+              </span>
+            )}
+          </label>
+          {templates.length > 0 && (
+            <select
+              value=""
+              disabled={applyingTemplate}
+              onChange={(e) => {
+                if (e.target.value) applyTemplate(e.target.value);
+                e.target.value = "";
+              }}
+              className="h-7 px-2 rounded-md border bg-background text-xs text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+            >
+              <option value="">Apply template…</option>
+              {templates.map((tpl) => (
+                <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        {checklist.length > 0 && (
+          <ul className="space-y-1 mb-2">
+            {checklist.map((item) => (
+              <li key={item.id} className="flex items-start gap-2 group">
+                <input
+                  type="checkbox"
+                  checked={!!item.completed_at}
+                  onChange={() => toggleChecklistItem(item)}
+                  className="mt-0.5 size-3.5 rounded border-input cursor-pointer shrink-0"
+                />
+                <span className={`flex-1 text-sm ${item.completed_at ? "line-through text-muted-foreground" : ""}`}>
+                  {item.title}
+                </span>
+                <button
+                  onClick={() => deleteChecklistItem(item.id)}
+                  className="shrink-0 text-muted-foreground/40 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-label="Remove checklist item"
+                >
+                  <X size={14} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={newItem}
+            onChange={(e) => setNewItem(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addChecklistItem();
+              }
+            }}
+            placeholder="Add checklist item…"
+            className="flex-1 h-8 px-3 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          <button
+            onClick={addChecklistItem}
+            disabled={!newItem.trim()}
+            className="h-8 w-8 grid place-items-center rounded-md border text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40"
+            aria-label="Add checklist item"
+          >
+            <Plus size={15} />
+          </button>
+        </div>
       </div>
 
       {/* Meta footer */}

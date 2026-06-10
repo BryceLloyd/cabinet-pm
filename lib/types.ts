@@ -68,9 +68,29 @@ export interface Task {
   completed_by: string | null;
   completed_at: string | null;
   priority: 1 | 2 | 3;
+  sort_order: number;
   created_by: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface TaskChecklistItem {
+  id: string;
+  task_id: string;
+  title: string;
+  completed_at: string | null;
+  completed_by: string | null;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface TaskTemplate {
+  id: string;
+  name: string;
+  items: string[];
+  sort_order: number;
+  created_by: string | null;
+  created_at: string;
 }
 
 export interface TaskType {

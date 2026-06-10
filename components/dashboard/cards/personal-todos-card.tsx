@@ -8,6 +8,7 @@ interface TodoRow {
   id: string;
   title: string;
   completed_at: string | null;
+  task_types: { name: string; color: string } | null;
 }
 
 export default function PersonalTodosCard({ userId, onTaskClick }: CardProps) {
@@ -18,7 +19,7 @@ export default function PersonalTodosCard({ userId, onTaskClick }: CardProps) {
     const supabase = createClient();
     supabase
       .from("tasks")
-      .select("id, title, completed_at")
+      .select("id, title, completed_at, task_types(name, color)")
       .eq("assigned_to", userId)
       .is("project_id", null)
       .is("room_id", null)
@@ -26,7 +27,7 @@ export default function PersonalTodosCard({ userId, onTaskClick }: CardProps) {
       .order("created_at", { ascending: false })
       .limit(15)
       .then(({ data }) => {
-        setTodos((data as TodoRow[]) || []);
+        setTodos((data as unknown as TodoRow[]) || []);
         setLoading(false);
       });
   }, [userId]);
@@ -57,7 +58,15 @@ export default function PersonalTodosCard({ userId, onTaskClick }: CardProps) {
             className="h-4 w-4 rounded border border-muted-foreground/30 shrink-0 hover:border-foreground transition-colors"
             aria-label={`Complete "${t.title}"`}
           />
-          <span className="text-sm truncate">{t.title}</span>
+          <span className="text-sm truncate flex-1 min-w-0">{t.title}</span>
+          {t.task_types && (
+            <span
+              className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0"
+              style={{ backgroundColor: `${t.task_types.color}20`, color: t.task_types.color }}
+            >
+              {t.task_types.name}
+            </span>
+          )}
         </li>
       ))}
     </ul>
