@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, Building2, Users, Layers, CalendarDays, Tag, ChevronLeft, Bell } from "lucide-react";
+import { User, Building2, Users, Layers, CalendarDays, Tag, ChevronLeft, Bell, ListChecks } from "lucide-react";
 
 const SETTINGS_NAV = [
   { href: "/settings/profile", label: "Profile", icon: User },
@@ -12,6 +12,7 @@ const SETTINGS_NAV = [
   { href: "/settings/phases", label: "Phases", icon: Layers },
   { href: "/settings/event-types", label: "Event types", icon: CalendarDays },
   { href: "/settings/task-types", label: "Task types", icon: Tag },
+  { href: "/settings/task-templates", label: "Task templates", icon: ListChecks },
 ] as const;
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {

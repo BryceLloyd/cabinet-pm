@@ -18,26 +18,26 @@ export default async function TasksPage({
 
   let query = supabase
     .from("tasks")
-    .select("*, projects(name), rooms(name), room_groups(name), task_types(id,name,color), assignee:assigned_to(full_name), completer:completed_by(full_name)");
+    .select("*, projects(name), rooms(name), room_groups(name), task_types(id,name,color), assignee:assigned_to(full_name), completer:completed_by(full_name), task_checklist_items(id, completed_at)");
 
   if (filter === "mine") {
     query = query.eq("assigned_to", user!.id).is("completed_at", null)
-      .order("due_date", { ascending: true, nullsFirst: false })
+      .order("sort_order", { ascending: true })
       .order("created_at", { ascending: false });
   } else if (filter === "personal") {
     query = query.is("project_id", null).is("room_id", null).eq("created_by", user!.id).is("completed_at", null)
-      .order("due_date", { ascending: true, nullsFirst: false })
+      .order("sort_order", { ascending: true })
       .order("created_at", { ascending: false });
   } else if (filter === "completed") {
     query = query.not("completed_at", "is", null)
       .order("completed_at", { ascending: false });
   } else if (filter === "all") {
     query = query.is("completed_at", null)
-      .order("due_date", { ascending: true, nullsFirst: false })
+      .order("sort_order", { ascending: true })
       .order("created_at", { ascending: false });
   }
 
-  const [{ data: tasks }, { data: projects }, { data: profiles }, { data: taskTypes }] = await Promise.all([
+  const [{ data: tasks }, { data: projects }, { data: profiles }, { data: taskTypes }, { data: templates }] = await Promise.all([
     query,
     supabase
       .from("projects")
@@ -46,6 +46,7 @@ export default async function TasksPage({
       .order("name"),
     supabase.from("profiles").select("id, full_name").is("deactivated_at", null),
     supabase.from("task_types").select("id, name, color").is("archived_at", null).order("sort_order"),
+    supabase.from("task_templates").select("id, name, items").order("sort_order"),
   ]);
 
   return (
@@ -55,6 +56,7 @@ export default async function TasksPage({
       projects={projects || []}
       profiles={profiles || []}
       taskTypes={taskTypes || []}
+      templates={templates || []}
       userId={user!.id}
       filter={filter}
     />

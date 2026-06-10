@@ -4,9 +4,30 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { format, isPast, isToday } from "date-fns";
-import { Plus } from "lucide-react";
+import { Plus, GripVertical, ListChecks } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { TaskDetailPanel } from "@/components/tasks/task-detail-panel";
 import { AddTaskPanel } from "@/components/tasks/add-task-panel";
+
+interface ChecklistSummaryItem {
+  id: string;
+  completed_at: string | null;
+}
 
 interface TaskRow {
   id: string;
@@ -14,6 +35,7 @@ interface TaskRow {
   description: string | null;
   due_date: string | null;
   priority: number;
+  sort_order: number;
   project_id: string | null;
   room_id: string | null;
   room_group_id: string | null;
@@ -29,6 +51,7 @@ interface TaskRow {
   task_types: { id: string; name: string; color: string } | null;
   assignee: { full_name: string } | null;
   completer: { full_name: string } | null;
+  task_checklist_items: ChecklistSummaryItem[] | null;
 }
 
 interface ProjectOption {
@@ -47,22 +70,110 @@ interface TaskTypeOption {
   color: string;
 }
 
+interface TemplateOption {
+  id: string;
+  name: string;
+  items: string[];
+}
+
 type Filter = "mine" | "all" | "personal" | "completed";
 
-/* ── Shared row renderers ── */
+/* ── Small helpers ── */
 
-function DesktopTaskRow({ t, onClick }: { t: TaskRow; onClick: () => void }) {
+function ChecklistBadge({ items }: { items: ChecklistSummaryItem[] | null | undefined }) {
+  if (!items || items.length === 0) return null;
+  const done = items.filter((i) => i.completed_at).length;
+  return (
+    <span
+      className="inline-flex items-center gap-0.5 text-[10px] tabular-nums text-muted-foreground"
+      title={`${done} of ${items.length} checklist items done`}
+    >
+      <ListChecks size={11} />
+      {done}/{items.length}
+    </span>
+  );
+}
+
+function TypeBadge({ type, mobile }: { type: TaskRow["task_types"]; mobile?: boolean }) {
+  if (!type) return mobile ? null : <span className="text-muted-foreground">—</span>;
+  return (
+    <span
+      className={`inline-flex items-center rounded font-medium ${mobile ? "text-[10px] px-1.5 py-0.5" : "text-xs px-1.5 py-0.5"}`}
+      style={{ backgroundColor: `${type.color}20`, color: type.color }}
+    >
+      {type.name}
+    </span>
+  );
+}
+
+function DragHandle({ attributes, listeners }: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  attributes: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  listeners: any;
+}) {
+  return (
+    <button
+      {...attributes}
+      {...listeners}
+      onClick={(e) => e.stopPropagation()}
+      className="touch-none cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-foreground"
+      aria-label="Drag to reorder"
+    >
+      <GripVertical size={14} />
+    </button>
+  );
+}
+
+/* ── Sortable row renderers ── */
+
+function SortableDesktopRow({
+  t,
+  variant,
+  reorderable,
+  onClick,
+}: {
+  t: TaskRow;
+  variant: "grouped" | "flat";
+  reorderable: boolean;
+  onClick: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: t.id, disabled: !reorderable });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : undefined,
+    position: isDragging ? ("relative" as const) : undefined,
+    zIndex: isDragging ? 10 : undefined,
+  };
   const overdue = !t.completed_at && t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date));
+
   return (
     <tr
+      ref={setNodeRef}
+      style={style}
       className={`hover:bg-muted/30 cursor-pointer ${t.completed_at ? "opacity-50" : ""}`}
       onClick={onClick}
     >
+      {reorderable && (
+        <td className="w-8 pl-3 py-3" onClick={(e) => e.stopPropagation()}>
+          <DragHandle attributes={attributes} listeners={listeners} />
+        </td>
+      )}
       <td className="px-4 py-3">
-        <div className={t.completed_at ? "line-through text-muted-foreground" : "font-medium"}>
-          {t.title}
+        <div className="flex items-center gap-2">
+          <span className={t.completed_at ? "line-through text-muted-foreground" : "font-medium"}>
+            {t.title}
+          </span>
+          <ChecklistBadge items={t.task_checklist_items} />
         </div>
       </td>
+      {variant === "flat" && (
+        <td className="px-4 py-3">
+          <TypeBadge type={t.task_types} />
+        </td>
+      )}
       <td className="px-4 py-3 text-muted-foreground">
         {t.projects ? (
           <Link href={`/projects/${t.project_id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>{t.projects.name}</Link>
@@ -72,6 +183,9 @@ function DesktopTaskRow({ t, onClick }: { t: TaskRow; onClick: () => void }) {
         {t.room_groups && <span> · {t.room_groups.name}</span>}
         {t.rooms && <span> · {t.rooms.name}</span>}
       </td>
+      {variant === "flat" && (
+        <td className="px-4 py-3 text-muted-foreground">{t.assignee?.full_name || "—"}</td>
+      )}
       <td className={`px-4 py-3 tabular-nums ${overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
         {t.due_date ? format(new Date(t.due_date), "MMM d, yyyy") : "—"}
       </td>
@@ -79,38 +193,91 @@ function DesktopTaskRow({ t, onClick }: { t: TaskRow; onClick: () => void }) {
   );
 }
 
-function MobileTaskCard({ t, onClick }: { t: TaskRow; onClick: () => void }) {
+function SortableMobileCard({
+  t,
+  variant,
+  reorderable,
+  onClick,
+}: {
+  t: TaskRow;
+  variant: "grouped" | "flat";
+  reorderable: boolean;
+  onClick: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: t.id, disabled: !reorderable });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : undefined,
+    zIndex: isDragging ? 10 : undefined,
+  };
   const overdue = !t.completed_at && t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date));
+
   return (
     <div
-      className={`rounded-lg border bg-card px-3 py-2 cursor-pointer ${t.completed_at ? "opacity-50" : ""}`}
+      ref={setNodeRef}
+      style={style}
+      className={`rounded-lg border bg-card px-3 py-2 cursor-pointer flex items-start gap-2 ${t.completed_at ? "opacity-50" : ""}`}
       onClick={onClick}
     >
-      <div className="flex items-start gap-2">
-        <div className="flex-1 min-w-0">
-          <div className={`text-sm ${t.completed_at ? "line-through text-muted-foreground" : "font-medium"}`}>
-            {t.title}
-          </div>
-          <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2">
-            {t.projects ? (
-              <>
-                <Link href={`/projects/${t.project_id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>{t.projects.name}</Link>
-                {t.room_groups && <span>· {t.room_groups.name}</span>}
-                {t.rooms && <span>· {t.rooms.name}</span>}
-              </>
-            ) : (
-              <span className="italic">Personal</span>
-            )}
-            {t.assignee?.full_name && <span>{t.assignee.full_name}</span>}
-          </div>
+      {reorderable && (
+        <span className="mt-0.5 shrink-0">
+          <DragHandle attributes={attributes} listeners={listeners} />
+        </span>
+      )}
+      <div className="flex-1 min-w-0">
+        <div className={`text-sm flex items-center gap-2 ${t.completed_at ? "line-through text-muted-foreground" : "font-medium"}`}>
+          <span className="min-w-0 truncate">{t.title}</span>
+          <ChecklistBadge items={t.task_checklist_items} />
         </div>
-        {t.due_date && (
-          <span className={`text-xs tabular-nums shrink-0 ${overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
-            {format(new Date(t.due_date), "MMM d")}
-          </span>
-        )}
+        <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2">
+          {variant === "flat" && <TypeBadge type={t.task_types} mobile />}
+          {t.projects ? (
+            <>
+              <Link href={`/projects/${t.project_id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>{t.projects.name}</Link>
+              {t.room_groups && <span>· {t.room_groups.name}</span>}
+              {t.rooms && <span>· {t.rooms.name}</span>}
+            </>
+          ) : (
+            <span className="italic">Personal</span>
+          )}
+          {t.assignee?.full_name && <span>{t.assignee.full_name}</span>}
+        </div>
       </div>
+      {t.due_date && (
+        <span className={`text-xs tabular-nums shrink-0 ${overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+          {format(new Date(t.due_date), "MMM d")}
+        </span>
+      )}
     </div>
+  );
+}
+
+/* ── Reorder wrapper (one isolated drag context per list) ── */
+
+function Reorder({
+  ids,
+  reorderable,
+  onDragEnd,
+  children,
+}: {
+  ids: string[];
+  reorderable: boolean;
+  onDragEnd: (e: DragEndEvent) => void;
+  children: React.ReactNode;
+}) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor),
+  );
+  if (!reorderable) return <>{children}</>;
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+        {children}
+      </SortableContext>
+    </DndContext>
   );
 }
 
@@ -121,6 +288,7 @@ export function TasksClient({
   projects,
   profiles,
   taskTypes,
+  templates,
   userId,
   filter,
 }: {
@@ -128,6 +296,7 @@ export function TasksClient({
   projects: ProjectOption[];
   profiles: ProfileOption[];
   taskTypes: TaskTypeOption[];
+  templates: TemplateOption[];
   userId: string;
   filter: Filter;
 }) {
@@ -137,7 +306,9 @@ export function TasksClient({
   const [selectedTask, setSelectedTask] = useState<TaskRow | null>(null);
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const selectStr = "*, projects(name), rooms(name), room_groups(name), task_types(id,name,color), assignee:assigned_to(full_name), completer:completed_by(full_name)";
+  const selectStr = "*, projects(name), rooms(name), room_groups(name), task_types(id,name,color), assignee:assigned_to(full_name), completer:completed_by(full_name), task_checklist_items(id, completed_at)";
+
+  const reorderable = filter !== "completed";
 
   useEffect(() => {
     return () => { if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current); };
@@ -184,6 +355,30 @@ export function TasksClient({
     return groups;
   }, [tasks, taskTypes, filter]);
 
+  function reorder(activeId: string, overId: string) {
+    if (activeId === overId) return;
+    const oldIndex = tasks.findIndex((t) => t.id === activeId);
+    const newIndex = tasks.findIndex((t) => t.id === overId);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const renumbered = arrayMove(tasks, oldIndex, newIndex).map((t, i) => ({ ...t, sort_order: i }));
+    setTasks(renumbered);
+
+    // Persist only rows whose sort_order actually changed.
+    const prevOrder = new Map(tasks.map((t) => [t.id, t.sort_order]));
+    Promise.all(
+      renumbered
+        .filter((t) => prevOrder.get(t.id) !== t.sort_order)
+        .map((t) => supabase.from("tasks").update({ sort_order: t.sort_order }).eq("id", t.id)),
+    );
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over) return;
+    reorder(String(active.id), String(over.id));
+  }
+
   async function toggleTask(task: TaskRow) {
     const updates = task.completed_at
       ? { completed_at: null, completed_by: null }
@@ -223,6 +418,11 @@ export function TasksClient({
     setTasks((prev) => [task, ...prev]);
   }
 
+  function handleChecklistChange(taskId: string, items: ChecklistSummaryItem[]) {
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, task_checklist_items: items } : t)));
+    setSelectedTask((cur) => (cur && cur.id === taskId ? { ...cur, task_checklist_items: items } : cur));
+  }
+
   const isGrouped = filter === "mine" && groupedByType && groupedByType.length > 0;
 
   return (
@@ -258,9 +458,11 @@ export function TasksClient({
                 </div>
                 <table className="w-full text-sm">
                   <tbody className="divide-y">
-                    {group.tasks.map((t) => (
-                      <DesktopTaskRow key={t.id} t={t} onClick={() => setSelectedTask(t)} />
-                    ))}
+                    <Reorder ids={group.tasks.map((t) => t.id)} reorderable={reorderable} onDragEnd={handleDragEnd}>
+                      {group.tasks.map((t) => (
+                        <SortableDesktopRow key={t.id} t={t} variant="grouped" reorderable={reorderable} onClick={() => setSelectedTask(t)} />
+                      ))}
+                    </Reorder>
                   </tbody>
                 </table>
               </div>
@@ -279,9 +481,11 @@ export function TasksClient({
                   <span className="text-xs text-muted-foreground">{group.tasks.length}</span>
                 </div>
                 <div className="space-y-1.5">
-                  {group.tasks.map((t) => (
-                    <MobileTaskCard key={t.id} t={t} onClick={() => setSelectedTask(t)} />
-                  ))}
+                  <Reorder ids={group.tasks.map((t) => t.id)} reorderable={reorderable} onDragEnd={handleDragEnd}>
+                    {group.tasks.map((t) => (
+                      <SortableMobileCard key={t.id} t={t} variant="grouped" reorderable={reorderable} onClick={() => setSelectedTask(t)} />
+                    ))}
+                  </Reorder>
                 </div>
               </div>
             ))}
@@ -294,6 +498,7 @@ export function TasksClient({
             <table className="w-full text-sm">
               <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
+                  {reorderable && <th className="w-8" />}
                   <th className="text-left font-medium px-4 py-2.5">Task</th>
                   <th className="text-left font-medium px-4 py-2.5">Type</th>
                   <th className="text-left font-medium px-4 py-2.5">Project / Room</th>
@@ -304,52 +509,16 @@ export function TasksClient({
               <tbody className="divide-y">
                 {tasks.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                    <td colSpan={reorderable ? 6 : 5} className="px-4 py-12 text-center text-muted-foreground">
                       No tasks.
                     </td>
                   </tr>
                 )}
-                {tasks.map((t) => {
-                  const overdue = !t.completed_at && t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date));
-                  return (
-                    <tr
-                      key={t.id}
-                      className={`hover:bg-muted/30 cursor-pointer ${t.completed_at ? "opacity-50" : ""}`}
-                      onClick={() => setSelectedTask(t)}
-                    >
-                      <td className="px-4 py-3">
-                        <div className={t.completed_at ? "line-through text-muted-foreground" : "font-medium"}>
-                          {t.title}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        {t.task_types ? (
-                          <span
-                            className="inline-flex items-center text-xs px-1.5 py-0.5 rounded font-medium"
-                            style={{ backgroundColor: `${t.task_types.color}20`, color: t.task_types.color }}
-                          >
-                            {t.task_types.name}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {t.projects ? (
-                          <Link href={`/projects/${t.project_id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>{t.projects.name}</Link>
-                        ) : (
-                          <span className="italic">Personal</span>
-                        )}
-                        {t.room_groups && <span> · {t.room_groups.name}</span>}
-                        {t.rooms && <span> · {t.rooms.name}</span>}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">{t.assignee?.full_name || "—"}</td>
-                      <td className={`px-4 py-3 tabular-nums ${overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
-                        {t.due_date ? format(new Date(t.due_date), "MMM d, yyyy") : "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
+                <Reorder ids={tasks.map((t) => t.id)} reorderable={reorderable} onDragEnd={handleDragEnd}>
+                  {tasks.map((t) => (
+                    <SortableDesktopRow key={t.id} t={t} variant="flat" reorderable={reorderable} onClick={() => setSelectedTask(t)} />
+                  ))}
+                </Reorder>
               </tbody>
             </table>
           </div>
@@ -361,49 +530,11 @@ export function TasksClient({
                 No tasks.
               </div>
             )}
-            {tasks.map((t) => {
-              const overdue = !t.completed_at && t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date));
-              return (
-                <div
-                  key={t.id}
-                  className={`rounded-lg border bg-card px-3 py-2 cursor-pointer ${t.completed_at ? "opacity-50" : ""}`}
-                  onClick={() => setSelectedTask(t)}
-                >
-                  <div className="flex items-start gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className={`text-sm ${t.completed_at ? "line-through text-muted-foreground" : "font-medium"}`}>
-                        {t.title}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2">
-                        {t.task_types && (
-                          <span
-                            className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded font-medium"
-                            style={{ backgroundColor: `${t.task_types.color}20`, color: t.task_types.color }}
-                          >
-                            {t.task_types.name}
-                          </span>
-                        )}
-                        {t.projects ? (
-                          <>
-                            <Link href={`/projects/${t.project_id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>{t.projects.name}</Link>
-                            {t.room_groups && <span>· {t.room_groups.name}</span>}
-                            {t.rooms && <span>· {t.rooms.name}</span>}
-                          </>
-                        ) : (
-                          <span className="italic">Personal</span>
-                        )}
-                        {t.assignee?.full_name && <span>{t.assignee.full_name}</span>}
-                      </div>
-                    </div>
-                    {t.due_date && (
-                      <span className={`text-xs tabular-nums shrink-0 ${overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
-                        {format(new Date(t.due_date), "MMM d")}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+            <Reorder ids={tasks.map((t) => t.id)} reorderable={reorderable} onDragEnd={handleDragEnd}>
+              {tasks.map((t) => (
+                <SortableMobileCard key={t.id} t={t} variant="flat" reorderable={reorderable} onClick={() => setSelectedTask(t)} />
+              ))}
+            </Reorder>
           </div>
         </>
       )}
@@ -440,11 +571,13 @@ export function TasksClient({
         task={selectedTask}
         profiles={profiles}
         taskTypes={taskTypes}
+        templates={templates}
         userId={userId}
         onClose={() => setSelectedTask(null)}
         onUpdated={handleTaskUpdated}
         onDeleted={handleTaskDeleted}
         onToggleComplete={(t) => { toggleTask(t); }}
+        onChecklistChange={handleChecklistChange}
       />
     </div>
   );
