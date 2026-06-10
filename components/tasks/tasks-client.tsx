@@ -561,6 +561,7 @@ export function TasksClient({
         projects={projects}
         profiles={profiles}
         taskTypes={taskTypes}
+        templates={templates}
         userId={userId}
         onClose={() => setShowAddPanel(false)}
         onCreated={handleTaskCreated}

@@ -12,6 +12,7 @@ type DrawerView = FabDrawerMode | "add-room";
 
 type EventTypeOption = { id: string; name: string; color: string };
 type TaskTypeOption = { id: string; name: string; color: string };
+type TemplateOption = { id: string; name: string; items: string[] };
 
 interface Props {
   open: boolean;
@@ -34,6 +35,8 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
   const [taskNotes, setTaskNotes] = useState("");
   const [assignee, setAssignee] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [subtasks, setSubtasks] = useState<string[]>([]);
+  const [newSubtask, setNewSubtask] = useState("");
   const [saving, setSaving] = useState(false);
 
   // Quick event form state
@@ -56,6 +59,7 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
   const [roomGroups, setRoomGroups] = useState<{ id: string; name: string }[]>([]);
   const [taskRooms, setTaskRooms] = useState<{ id: string; name: string; room_group_id: string | null }[]>([]);
   const [taskTypes, setTaskTypes] = useState<TaskTypeOption[]>([]);
+  const [taskTemplates, setTaskTemplates] = useState<TemplateOption[]>([]);
   const [eventTypes, setEventTypes] = useState<EventTypeOption[]>([]);
   const [eventRoomGroups, setEventRoomGroups] = useState<{ id: string; name: string }[]>([]);
   const [optionsLoaded, setOptionsLoaded] = useState(false);
@@ -73,6 +77,8 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
       setTaskRoomId("");
       setTaskTypeId("");
       setTaskNotes("");
+      setSubtasks([]);
+      setNewSubtask("");
       setEventTitle("");
       setEventDate(format(new Date(), "yyyy-MM-dd"));
       setEventTypeId("");
@@ -103,12 +109,14 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
         .select("id, name, color")
         .is("archived_at", null)
         .order("sort_order"),
+      supabase.from("task_templates").select("id, name, items").order("sort_order"),
       supabase.auth.getUser(),
-    ]).then(([{ data: p }, { data: pr }, { data: et }, { data: tt }, { data: { user } }]) => {
+    ]).then(([{ data: p }, { data: pr }, { data: et }, { data: tt }, { data: tpl }, { data: { user } }]) => {
       setProjects(p || []);
       setProfiles(pr || []);
       setEventTypes(et || []);
       setTaskTypes(tt || []);
+      setTaskTemplates((tpl as TemplateOption[]) || []);
       const uid = user?.id || "";
       setCurrentUserId(uid);
       setAssignee(uid);
@@ -135,6 +143,23 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
       .then(({ data }) => setEventRoomGroups(data || []));
   }, [eventProjectId, supabase]);
 
+  function addSubtask() {
+    const t = newSubtask.trim();
+    if (!t) return;
+    setSubtasks((prev) => [...prev, t]);
+    setNewSubtask("");
+  }
+
+  function removeSubtask(index: number) {
+    setSubtasks((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function applyTemplate(templateId: string) {
+    const tpl = taskTemplates.find((t) => t.id === templateId);
+    if (!tpl || tpl.items.length === 0) return;
+    setSubtasks((prev) => [...prev, ...tpl.items]);
+  }
+
   async function addTask() {
     if (!title.trim() || saving) return;
     setSaving(true);
@@ -143,7 +168,7 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
     } = await supabase.auth.getUser();
     if (!user) { setSaving(false); return; }
 
-    const { error } = await supabase.from("tasks").insert({
+    const { data: task, error } = await supabase.from("tasks").insert({
       title: title.trim(),
       description: taskNotes.trim() || null,
       project_id: taskProjectId || null,
@@ -153,13 +178,24 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
       assigned_to: assignee || null,
       due_date: dueDate || null,
       created_by: user.id,
-    });
+    }).select("id").single();
+
+    if (error || !task) {
+      setSaving(false);
+      return;
+    }
+
+    // Insert subtasks (checklist items) for the new task, if any.
+    const items = subtasks.map((s) => s.trim()).filter(Boolean);
+    if (items.length > 0) {
+      await supabase.from("task_checklist_items").insert(
+        items.map((title, i) => ({ task_id: task.id, title, sort_order: i }))
+      );
+    }
 
     setSaving(false);
-    if (!error) {
-      onOpenChange(false);
-      router.refresh();
-    }
+    onOpenChange(false);
+    router.refresh();
   }
 
   async function addRoom() {
@@ -408,6 +444,71 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
                   placeholder="Notes (optional)"
                   className="w-full h-10 px-3 text-sm rounded-md border bg-background"
                 />
+
+                {/* Subtasks */}
+                <div className="space-y-2">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Subtasks
+                  </div>
+                  {taskTemplates.length > 0 && (
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        if (e.target.value) applyTemplate(e.target.value);
+                        e.target.value = "";
+                      }}
+                      className="w-full h-10 px-2 text-sm text-muted-foreground rounded-md border bg-background"
+                    >
+                      <option value="">Add from template…</option>
+                      {taskTemplates.map((tpl) => (
+                        <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+                      ))}
+                    </select>
+                  )}
+                  {subtasks.length > 0 && (
+                    <ul className="space-y-1">
+                      {subtasks.map((item, i) => (
+                        <li
+                          key={i}
+                          className="flex items-center gap-2 px-2.5 py-1.5 rounded-md border bg-background text-sm"
+                        >
+                          <span className="flex-1 truncate">{item}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeSubtask(i)}
+                            className="text-muted-foreground hover:text-foreground"
+                            aria-label="Remove subtask"
+                          >
+                            ✕
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="flex gap-2">
+                    <input
+                      value={newSubtask}
+                      onChange={(e) => setNewSubtask(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addSubtask();
+                        }
+                      }}
+                      placeholder="Add a subtask…"
+                      className="flex-1 h-10 px-3 text-sm rounded-md border bg-background"
+                    />
+                    <button
+                      type="button"
+                      onClick={addSubtask}
+                      disabled={!newSubtask.trim()}
+                      className="h-10 px-3 text-sm font-medium rounded-md border bg-background hover:bg-muted disabled:opacity-50"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+
                 <button
                   onClick={addTask}
                   disabled={!title.trim() || saving}
