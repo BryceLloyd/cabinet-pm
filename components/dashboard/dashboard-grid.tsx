@@ -121,6 +121,7 @@ export function DashboardGrid({ userId }: { userId: string }) {
   const [profiles, setProfiles] = useState<{ id: string; full_name: string }[]>([]);
   const [eventTypes, setEventTypes] = useState<{ id: string; name: string; color: string; archived_at: string | null }[]>([]);
   const [taskTypes, setTaskTypes] = useState<{ id: string; name: string; color: string }[]>([]);
+  const [taskTemplates, setTaskTemplates] = useState<{ id: string; name: string; items: string[] }[]>([]);
   const [roomGroups, setRoomGroups] = useState<{ id: string; name: string; project_id: string }[]>([]);
   const [dataLoaded, setDataLoaded] = useState(false);
 
@@ -140,11 +141,13 @@ export function DashboardGrid({ userId }: { userId: string }) {
       supabase.from("event_types").select("id, name, color, archived_at").order("sort_order"),
       supabase.from("task_types").select("id, name, color").is("archived_at", null).order("sort_order"),
       supabase.from("room_groups").select("id, name, project_id").order("sort_order"),
-    ]).then(([{ data: p }, { data: pr }, { data: et }, { data: tt }, { data: rg }]) => {
+      supabase.from("task_templates").select("id, name, items").order("sort_order"),
+    ]).then(([{ data: p }, { data: pr }, { data: et }, { data: tt }, { data: rg }, { data: tpl }]) => {
       setProjects(p || []);
       setProfiles(pr || []);
       setEventTypes(et || []);
       setTaskTypes(tt || []);
+      setTaskTemplates(tpl || []);
       const groups = rg || [];
       setRoomGroups(groups);
       const map = new Map<string, typeof groups>();
@@ -336,6 +339,7 @@ export function DashboardGrid({ userId }: { userId: string }) {
         projects={projects}
         profiles={profiles}
         taskTypes={taskTypes}
+        templates={taskTemplates}
         userId={userId}
         onClose={() => setShowAddTask(false)}
         onCreated={() => { setShowAddTask(false); router.refresh(); }}
