@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Drawer } from "vaul";
 import { createClient } from "@/lib/supabase/client";
@@ -63,6 +63,43 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
   const [eventTypes, setEventTypes] = useState<EventTypeOption[]>([]);
   const [eventRoomGroups, setEventRoomGroups] = useState<{ id: string; name: string }[]>([]);
   const [optionsLoaded, setOptionsLoaded] = useState(false);
+
+  // Scroll container + keyboard-aware height (mirrors SlidePanel)
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [maxHeight, setMaxHeight] = useState("85vh");
+
+  // Shrink the drawer to the visible viewport when the mobile keyboard opens,
+  // so lower inputs and the submit button stay reachable above the keyboard.
+  useEffect(() => {
+    if (!open) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    function onResize() {
+      if (!vv) return;
+      setMaxHeight(`${vv.height - 12}px`);
+    }
+    onResize();
+    vv.addEventListener("resize", onResize);
+    return () => {
+      vv.removeEventListener("resize", onResize);
+      setMaxHeight("85vh");
+    };
+  }, [open]);
+
+  // When an input/select inside the drawer gains focus, scroll it into view
+  // once the keyboard has finished animating.
+  useEffect(() => {
+    if (!open) return;
+    function onFocusIn(e: FocusEvent) {
+      const target = e.target as HTMLElement;
+      if (!scrollRef.current?.contains(target)) return;
+      setTimeout(() => {
+        target.scrollIntoView({ block: "center", behavior: "smooth" });
+      }, 150);
+    }
+    document.addEventListener("focusin", onFocusIn);
+    return () => document.removeEventListener("focusin", onFocusIn);
+  }, [open]);
 
   // Reset state when drawer opens
   useEffect(() => {
@@ -261,9 +298,12 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
     <Drawer.Root open={open} onOpenChange={onOpenChange}>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 bg-black/40 z-50" />
-        <Drawer.Content className="fixed bottom-0 inset-x-0 z-50 rounded-t-xl bg-background max-h-[85vh] flex flex-col">
+        <Drawer.Content
+          style={{ maxHeight }}
+          className="fixed bottom-0 inset-x-0 z-50 rounded-t-xl bg-background flex flex-col transition-[max-height] duration-150 ease-out"
+        >
           <div className="mx-auto w-12 h-1.5 shrink-0 rounded-full bg-muted-foreground/20 my-3" />
-          <div className="px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] overflow-y-auto flex-1">
+          <div ref={scrollRef} className="px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] overflow-y-auto flex-1">
 
             {/* Dashboard picker */}
             {view === "dashboard-picker" && (

@@ -25,6 +25,9 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  // Shrink the layout viewport when the on-screen keyboard opens so bottom
+  // sheets / fixed inputs stay above the keyboard instead of hiding behind it.
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
