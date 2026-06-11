@@ -20,11 +20,18 @@ interface TaskTypeOption {
   color: string;
 }
 
+interface TemplateOption {
+  id: string;
+  name: string;
+  items: string[];
+}
+
 interface AddTaskPanelProps {
   open: boolean;
   projects: ProjectOption[];
   profiles: ProfileOption[];
   taskTypes: TaskTypeOption[];
+  templates?: TemplateOption[];
   userId: string;
   onClose: () => void;
   onCreated: (task: any) => void;
@@ -35,6 +42,7 @@ export function AddTaskPanel({
   projects,
   profiles,
   taskTypes,
+  templates = [],
   userId,
   onClose,
   onCreated,
@@ -48,6 +56,8 @@ export function AddTaskPanel({
   const [taskTypeId, setTaskTypeId] = useState("");
   const [assignee, setAssignee] = useState(userId);
   const [notes, setNotes] = useState("");
+  const [subtasks, setSubtasks] = useState<string[]>([]);
+  const [newSubtask, setNewSubtask] = useState("");
   const [saving, setSaving] = useState(false);
 
   const [roomGroups, setRoomGroups] = useState<{ id: string; name: string }[]>([]);
@@ -83,11 +93,30 @@ export function AddTaskPanel({
     setTaskTypeId("");
     setAssignee(userId);
     setNotes("");
+    setSubtasks([]);
+    setNewSubtask("");
   }
 
   function handleClose() {
     resetForm();
     onClose();
+  }
+
+  function addSubtask() {
+    const t = newSubtask.trim();
+    if (!t) return;
+    setSubtasks((prev) => [...prev, t]);
+    setNewSubtask("");
+  }
+
+  function removeSubtask(index: number) {
+    setSubtasks((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function applyTemplate(templateId: string) {
+    const tpl = templates.find((t) => t.id === templateId);
+    if (!tpl || tpl.items.length === 0) return;
+    setSubtasks((prev) => [...prev, ...tpl.items]);
   }
 
   async function handleSubmit() {
@@ -110,13 +139,33 @@ export function AddTaskPanel({
       .select("*, projects(name), rooms(name), room_groups(name), task_types(id,name,color), assignee:assigned_to(full_name), completer:completed_by(full_name), task_checklist_items(id, completed_at)")
       .single();
 
-    setSaving(false);
-
-    if (!error && data) {
-      onCreated(data);
-      resetForm();
-      onClose();
+    if (error || !data) {
+      setSaving(false);
+      return;
     }
+
+    // Insert subtasks (checklist items) for the new task, if any.
+    const items = subtasks.map((s) => s.trim()).filter(Boolean);
+    if (items.length > 0) {
+      const rows = items.map((title, i) => ({
+        task_id: data.id,
+        title,
+        sort_order: i,
+      }));
+      const { data: inserted } = await supabase
+        .from("task_checklist_items")
+        .insert(rows)
+        .select("id, completed_at");
+      if (inserted) {
+        // Attach so the list badge reflects the new subtasks immediately.
+        data.task_checklist_items = inserted;
+      }
+    }
+
+    setSaving(false);
+    onCreated(data);
+    resetForm();
+    onClose();
   }
 
   return (
@@ -251,7 +300,7 @@ export function AddTaskPanel({
       </div>
 
       {/* Notes */}
-      <div className="mb-6">
+      <div className="mb-4">
         <label className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
           Notes
         </label>
@@ -262,6 +311,75 @@ export function AddTaskPanel({
           rows={4}
           className="w-full px-3 py-2 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
         />
+      </div>
+
+      {/* Subtasks */}
+      <div className="mb-6">
+        <label className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+          Subtasks
+        </label>
+
+        {templates.length > 0 && (
+          <select
+            value=""
+            onChange={(e) => {
+              if (e.target.value) applyTemplate(e.target.value);
+              e.target.value = "";
+            }}
+            className="w-full h-9 px-2 mb-2 rounded-md border bg-background text-sm text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">Add from template…</option>
+            {templates.map((tpl) => (
+              <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+            ))}
+          </select>
+        )}
+
+        {subtasks.length > 0 && (
+          <ul className="mb-2 space-y-1">
+            {subtasks.map((item, i) => (
+              <li
+                key={i}
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-md border bg-background text-sm"
+              >
+                <span className="flex-1 truncate">{item}</span>
+                <button
+                  type="button"
+                  onClick={() => removeSubtask(i)}
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label="Remove subtask"
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newSubtask}
+            onChange={(e) => setNewSubtask(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addSubtask();
+              }
+            }}
+            placeholder="Add a subtask…"
+            className="flex-1 h-9 px-3 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          <button
+            type="button"
+            onClick={addSubtask}
+            disabled={!newSubtask.trim()}
+            className="h-9 px-3 rounded-md border bg-background text-sm font-medium hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Add subtask"
+          >
+            Add
+          </button>
+        </div>
       </div>
 
       {/* Submit */}
