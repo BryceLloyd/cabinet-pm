@@ -94,7 +94,7 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
       const target = e.target as HTMLElement;
       if (!scrollRef.current?.contains(target)) return;
       setTimeout(() => {
-        target.scrollIntoView({ block: "center", behavior: "smooth" });
+        target.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
       }, 150);
     }
     document.addEventListener("focusin", onFocusIn);
@@ -303,7 +303,11 @@ export function MobileFabDrawer({ open, onOpenChange, mode: initialMode, project
           className="fixed bottom-0 inset-x-0 z-50 rounded-t-xl bg-background flex flex-col transition-[max-height] duration-150 ease-out"
         >
           <div className="mx-auto w-12 h-1.5 shrink-0 rounded-full bg-muted-foreground/20 my-3" />
-          <div ref={scrollRef} className="px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] overflow-y-auto flex-1">
+          <div
+            ref={scrollRef}
+            style={{ touchAction: "pan-y", overscrollBehavior: "contain" }}
+            className="px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] overflow-y-auto overflow-x-hidden flex-1"
+          >
 
             {/* Dashboard picker */}
             {view === "dashboard-picker" && (

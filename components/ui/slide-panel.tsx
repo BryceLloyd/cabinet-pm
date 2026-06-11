@@ -57,7 +57,7 @@ export function SlidePanel({ open, onClose, title, onDelete, showClose = true, c
       if (!bodyRef.current?.contains(target)) return;
       // Small delay lets the keyboard finish animating
       setTimeout(() => {
-        target.scrollIntoView({ block: "center", behavior: "smooth" });
+        target.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
       }, 150);
     }
     document.addEventListener("focusin", onFocusIn);
@@ -166,7 +166,11 @@ export function SlidePanel({ open, onClose, title, onDelete, showClose = true, c
           </div>
 
           {/* Scrollable body */}
-          <div ref={bodyRef} className="flex-1 overflow-y-auto px-4 py-4">
+          <div
+            ref={bodyRef}
+            style={{ touchAction: "pan-y", overscrollBehavior: "contain" }}
+            className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4"
+          >
             {children}
           </div>
         </div>
