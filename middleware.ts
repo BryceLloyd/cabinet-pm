@@ -27,12 +27,34 @@ export async function middleware(request: NextRequest) {
   // Supabase calls don't 403 after the JWT expires.
   const { data: { user } } = await supabase.auth.getUser();
 
-  const isAuthPage = request.nextUrl.pathname.startsWith("/login");
+  const path = request.nextUrl.pathname;
+  const isAuthPage = path.startsWith("/login");
   if (!user && !isAuthPage) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
   if (user && isAuthPage) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  // Office / Production view access (admins always have both).
+  if (user && !isAuthPage && !path.startsWith("/auth")) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, office_access, production_access")
+      .eq("id", user.id)
+      .single();
+    if (profile) {
+      const isAdmin = profile.role === "admin";
+      const office = isAdmin || profile.office_access;
+      const production = isAdmin || profile.production_access;
+      const isProduction = path === "/production" || path.startsWith("/production/");
+      if (isProduction && !production && office) {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+      if (!isProduction && !office && production) {
+        return NextResponse.redirect(new URL("/production", request.url));
+      }
+    }
   }
 
   return response;

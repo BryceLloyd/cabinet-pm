@@ -32,11 +32,13 @@ export function UserMenu({
   email,
   role,
   avatarUrl,
+  showProductionSettings = false,
 }: {
   fullName: string | null;
   email: string;
   role: string;
   avatarUrl: string | null;
+  showProductionSettings?: boolean;
 }) {
   const router = useRouter();
   const initials = getInitials(fullName, email);
@@ -93,6 +95,20 @@ export function UserMenu({
               Settings
             </Link>
           </DropdownMenu.Item>
+
+          {showProductionSettings && (
+            <DropdownMenu.Item asChild>
+              <Link
+                href="/production/settings"
+                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm cursor-pointer outline-none hover:bg-muted focus:bg-muted"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
+                </svg>
+                Production settings
+              </Link>
+            </DropdownMenu.Item>
+          )}
 
           <DropdownMenu.Separator className="h-px bg-border my-1" />
 
