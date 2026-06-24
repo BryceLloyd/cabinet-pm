@@ -9,6 +9,7 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import { ServiceWorkerRegister } from "@/components/notifications/sw-register";
 import { ViewSwitch } from "@/components/view-switch";
 import { HeaderNav } from "@/components/header-nav";
+import { canSeeOffice, canSeeProduction, canSeeProductionSettings } from "@/lib/production/access";
 
 export default async function AppShell({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -16,7 +17,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
   if (!user) redirect("/login");
 
   const [{ data: profile }, { data: businessInfo }] = await Promise.all([
-    supabase.from("profiles").select("full_name, role, avatar_url, density_preference, deactivated_at, office_access, production_access").eq("id", user.id).single(),
+    supabase.from("profiles").select("full_name, role, avatar_url, density_preference, deactivated_at").eq("id", user.id).single(),
     supabase.from("business_info").select("name, logo_url").eq("id", 1).single(),
   ]);
 
@@ -43,8 +44,8 @@ export default async function AppShell({ children }: { children: React.ReactNode
   const bizName = businessInfo?.name || "Cabinet PM";
   const bizLogo = businessInfo?.logo_url || null;
   const isAdmin = profile.role === "admin";
-  const hasOffice = isAdmin || profile.office_access;
-  const hasProduction = isAdmin || profile.production_access;
+  const hasOffice = canSeeOffice(profile.role);
+  const hasProduction = canSeeProduction(profile.role);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -67,7 +68,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
               email={user.email || ""}
               role={profile.role}
               avatarUrl={profile.avatar_url || null}
-              showProductionSettings={isAdmin && hasProduction}
+              showProductionSettings={canSeeProductionSettings(profile.role) && hasProduction}
             />
           </div>
         </div>

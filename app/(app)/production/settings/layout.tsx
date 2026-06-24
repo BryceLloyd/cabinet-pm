@@ -8,7 +8,7 @@ export default async function ProductionSettingsLayout({ children }: { children:
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-  if (!canSeeProductionSettings(profile?.role ?? "member")) redirect("/production");
+  if (!canSeeProductionSettings(profile?.role ?? "")) redirect("/production");
 
   return (
     <div className="container py-6 md:py-8 px-4">
