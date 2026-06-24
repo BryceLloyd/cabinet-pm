@@ -15,6 +15,7 @@ interface Props {
   suppliers: Supplier[];
   hardwareCatalog: HardwareCatalogItem[];
   userId: string;
+  canPlace: boolean;
 }
 
 const PILL: Record<HardwareItemStatus, { label: string; cls: string }> = {
@@ -23,7 +24,7 @@ const PILL: Record<HardwareItemStatus, { label: string; cls: string }> = {
   received: { label: "Received", cls: "bg-emerald-50 text-emerald-700" },
 };
 
-function BatchCard({ batch, userId, done }: { batch: HardwareBatch; userId: string; done?: boolean }) {
+function BatchCard({ batch, userId, canPlace, done }: { batch: HardwareBatch; userId: string; canPlace: boolean; done?: boolean }) {
   const router = useRouter();
   const supabase = createClient();
   const [status, setStatus] = useState<HardwareItemStatus>(batch.status);
@@ -50,8 +51,11 @@ function BatchCard({ batch, userId, done }: { batch: HardwareBatch; userId: stri
         <span className="text-sm font-semibold truncate w-full md:w-auto md:flex-1">{batch.cutlistLabel ?? batch.orderTitle}</span>
         <div className="flex items-center gap-2.5 ml-auto shrink-0">
           <span className={`text-[10px] px-2 py-0.5 rounded-full ${pill.cls}`}>{pill.label}</span>
-          <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer">Ordered<input type="checkbox" checked={ordered} onChange={() => update(ordered ? "to_order" : "ordered")} className="size-4 rounded border-input" /></label>
-          <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer">Received<input type="checkbox" checked={received} onChange={() => update(received ? "ordered" : "received")} className="size-4 rounded border-input" /></label>
+          {canPlace && (
+            <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer">Ordered<input type="checkbox" checked={ordered} onChange={() => update(ordered ? "to_order" : "ordered")} className="size-4 rounded border-input" /></label>
+          )}
+          {/* Factory may mark received, but not un-receive (that would set it back to "ordered"). */}
+          <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer">Received<input type="checkbox" checked={received} disabled={!canPlace && received} onChange={() => update(received ? "ordered" : "received")} className="size-4 rounded border-input disabled:opacity-50" /></label>
         </div>
       </div>
       <ul className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
@@ -61,7 +65,7 @@ function BatchCard({ batch, userId, done }: { batch: HardwareBatch; userId: stri
   );
 }
 
-export function HardwareOrders({ batches, cutlists, suppliers, hardwareCatalog, userId }: Props) {
+export function HardwareOrders({ batches, cutlists, suppliers, hardwareCatalog, userId, canPlace }: Props) {
   const [addOpen, setAddOpen] = useState(false);
   const active = batches.filter((b) => b.status !== "received");
   const completed = batches.filter((b) => b.status === "received");
@@ -87,7 +91,7 @@ export function HardwareOrders({ batches, cutlists, suppliers, hardwareCatalog, 
               <div key={sup}>
                 <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">{sup}</div>
                 <div className="space-y-1.5">
-                  {bySupplier.get(sup)!.map((b) => <BatchCard key={b.key} batch={b} userId={userId} />)}
+                  {bySupplier.get(sup)!.map((b) => <BatchCard key={b.key} batch={b} userId={userId} canPlace={canPlace} />)}
                 </div>
               </div>
             ))}
@@ -95,13 +99,17 @@ export function HardwareOrders({ batches, cutlists, suppliers, hardwareCatalog, 
           </div>
 
           <CompletedSection count={completed.length}>
-            {completed.map((b) => <BatchCard key={b.key} batch={b} userId={userId} done />)}
+            {completed.map((b) => <BatchCard key={b.key} batch={b} userId={userId} canPlace={canPlace} done />)}
           </CompletedSection>
         </>
       )}
 
-      <ActionPill label="New hardware order" onClick={() => setAddOpen(true)} />
-      <AddHardwareOrderPanel open={addOpen} onClose={() => setAddOpen(false)} cutlists={cutlists} suppliers={suppliers} hardwareCatalog={hardwareCatalog} userId={userId} />
+      {canPlace && (
+        <>
+          <ActionPill label="New hardware order" onClick={() => setAddOpen(true)} />
+          <AddHardwareOrderPanel open={addOpen} onClose={() => setAddOpen(false)} cutlists={cutlists} suppliers={suppliers} hardwareCatalog={hardwareCatalog} userId={userId} />
+        </>
+      )}
     </div>
   );
 }
