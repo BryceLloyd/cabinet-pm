@@ -1,7 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
-export async function createClient() {
+// Wrapped in React cache() so repeated calls within a single server request
+// (e.g. the app shell layout + the page it renders) share one client instead
+// of re-parsing cookies and opening a new connection each time.
+export const createClient = cache(async () => {
   const cookieStore = await cookies();
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -27,4 +31,15 @@ export async function createClient() {
       },
     }
   );
-}
+});
+
+// getUser() hits the Supabase auth server over the network every call. The shell
+// layout and each page both need the user, so cache() collapses those into one
+// network round-trip per request.
+export const getUser = cache(async () => {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user;
+});

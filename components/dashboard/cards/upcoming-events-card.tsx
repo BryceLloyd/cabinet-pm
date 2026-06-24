@@ -43,11 +43,17 @@ function normalizeEvents(data: EventRowRaw[]): EventRow[] {
   });
 }
 
-export default function UpcomingEventsCard({ userId, onEventClick }: CardProps) {
-  const [events, setEvents] = useState<EventRow[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function UpcomingEventsCard({ userId, onEventClick, initialData }: CardProps) {
+  const initial = initialData as EventRow[] | undefined;
+  const [events, setEvents] = useState<EventRow[]>(initial ?? []);
+  const [loading, setLoading] = useState(initial === undefined);
 
   useEffect(() => {
+    if (initial !== undefined) {
+      setEvents(initial);
+      setLoading(false);
+      return;
+    }
     const supabase = createClient();
     const today = format(new Date(), "yyyy-MM-dd");
     const in14 = format(addDays(new Date(), 14), "yyyy-MM-dd");
@@ -63,7 +69,7 @@ export default function UpcomingEventsCard({ userId, onEventClick }: CardProps) 
         setEvents(normalizeEvents((data as EventRowRaw[]) || []));
         setLoading(false);
       });
-  }, [userId]);
+  }, [userId, initial]);
 
   return (
     <ul className="divide-y">

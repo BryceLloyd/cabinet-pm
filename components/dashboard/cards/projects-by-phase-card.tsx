@@ -11,11 +11,17 @@ interface Phase {
   sort_order: number;
 }
 
-export default function ProjectsByPhaseCard({ userId }: CardProps) {
-  const [phaseCounts, setPhaseCounts] = useState<{ phase: Phase; count: number }[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function ProjectsByPhaseCard({ userId, initialData }: CardProps) {
+  const initial = initialData as { phase: Phase; count: number }[] | undefined;
+  const [phaseCounts, setPhaseCounts] = useState<{ phase: Phase; count: number }[]>(initial ?? []);
+  const [loading, setLoading] = useState(initial === undefined);
 
   useEffect(() => {
+    if (initial !== undefined) {
+      setPhaseCounts(initial);
+      setLoading(false);
+      return;
+    }
     const supabase = createClient();
     Promise.all([
       supabase
@@ -36,7 +42,7 @@ export default function ProjectsByPhaseCard({ userId }: CardProps) {
       setPhaseCounts(result);
       setLoading(false);
     });
-  }, [userId]);
+  }, [userId, initial]);
 
   const maxCount = Math.max(...phaseCounts.map((r) => r.count), 1);
 

@@ -10,11 +10,17 @@ interface MemberLoad {
   count: number;
 }
 
-export default function TeamWorkloadCard({ userId }: CardProps) {
-  const [members, setMembers] = useState<MemberLoad[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function TeamWorkloadCard({ userId, initialData }: CardProps) {
+  const initial = initialData as MemberLoad[] | undefined;
+  const [members, setMembers] = useState<MemberLoad[]>(initial ?? []);
+  const [loading, setLoading] = useState(initial === undefined);
 
   useEffect(() => {
+    if (initial !== undefined) {
+      setMembers(initial);
+      setLoading(false);
+      return;
+    }
     const supabase = createClient();
     Promise.all([
       supabase
@@ -39,7 +45,7 @@ export default function TeamWorkloadCard({ userId }: CardProps) {
       setMembers(result);
       setLoading(false);
     });
-  }, [userId]);
+  }, [userId, initial]);
 
   return (
     <ul className="divide-y">
