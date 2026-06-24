@@ -14,6 +14,10 @@ export interface CardProps {
   userId: string;
   onTaskClick?: (taskId: string) => void;
   onEventClick?: (eventId: string) => void;
+  // Server-prefetched, render-ready data for this card. When provided the card
+  // renders immediately and skips its own browser fetch. Shape is per-card; each
+  // card casts to its expected type. Re-supplied on router.refresh().
+  initialData?: unknown;
 }
 
 export const CARD_REGISTRY: Record<string, CardDefinition> = {
