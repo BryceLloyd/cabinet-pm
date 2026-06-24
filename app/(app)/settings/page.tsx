@@ -1,24 +1,31 @@
 import Link from "next/link";
 import { User, Bell, Building2, Users, Layers, CalendarDays, Tag, ChevronRight, ListChecks } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
 import { SettingsDesktopRedirect } from "./desktop-redirect";
 
 const SETTINGS_SECTIONS = [
-  { href: "/settings/profile", label: "Profile", description: "Name, avatar, appearance", icon: User },
-  { href: "/settings/notifications", label: "Notifications", description: "Push and in-app alerts", icon: Bell },
-  { href: "/settings/business", label: "Business", description: "Company info and branding", icon: Building2 },
-  { href: "/settings/team", label: "Team", description: "Members and permissions", icon: Users },
-  { href: "/settings/phases", label: "Phases", description: "Project phase pipeline", icon: Layers },
-  { href: "/settings/event-types", label: "Event types", description: "Calendar event categories", icon: CalendarDays },
-  { href: "/settings/task-types", label: "Task types", description: "Task categories", icon: Tag },
-  { href: "/settings/task-templates", label: "Task templates", description: "Reusable task checklists", icon: ListChecks },
+  { href: "/settings/profile", label: "Profile", description: "Name, avatar, appearance", icon: User, adminOnly: false },
+  { href: "/settings/notifications", label: "Notifications", description: "Push and in-app alerts", icon: Bell, adminOnly: false },
+  { href: "/settings/business", label: "Business", description: "Company info and branding", icon: Building2, adminOnly: true },
+  { href: "/settings/team", label: "Team", description: "Members and permissions", icon: Users, adminOnly: true },
+  { href: "/settings/phases", label: "Phases", description: "Project phase pipeline", icon: Layers, adminOnly: true },
+  { href: "/settings/event-types", label: "Event types", description: "Calendar event categories", icon: CalendarDays, adminOnly: true },
+  { href: "/settings/task-types", label: "Task types", description: "Task categories", icon: Tag, adminOnly: true },
+  { href: "/settings/task-templates", label: "Task templates", description: "Reusable task checklists", icon: ListChecks, adminOnly: true },
 ] as const;
 
-export default function SettingsIndexPage() {
+export default async function SettingsIndexPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user?.id ?? "").single();
+  const isAdmin = profile?.role === "admin";
+  const sections = SETTINGS_SECTIONS.filter((s) => isAdmin || !s.adminOnly);
+
   return (
     <>
       <SettingsDesktopRedirect />
       <div className="space-y-1 md:hidden">
-        {SETTINGS_SECTIONS.map((section) => {
+        {sections.map((section) => {
           const Icon = section.icon;
           return (
             <Link

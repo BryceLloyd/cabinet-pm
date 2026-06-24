@@ -13,12 +13,16 @@ export default async function HardwarePage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [batches, cutlistsRes, suppliersRes, hardwareRes] = await Promise.all([
+  const [batches, cutlistsRes, suppliersRes, hardwareRes, profileRes] = await Promise.all([
     loadHardwareBatches(supabase),
     supabase.from("cutlists").select("id, name, project:projects(name)").order("created_at", { ascending: false }),
     supabase.from("suppliers").select("*").is("archived_at", null).order("sort_order"),
     supabase.from("hardware_catalog").select("*").is("archived_at", null).order("sort_order"),
+    supabase.from("profiles").select("role").eq("id", user.id).single(),
   ]);
+
+  // Placing/ordering is office/admin only; factory may only mark received.
+  const canPlace = profileRes.data?.role === "admin" || profileRes.data?.role === "office";
 
   const cutlists = (cutlistsRes.data ?? []).map((c) => {
     const project = one<{ name: string }>(c.project);
@@ -32,7 +36,7 @@ export default async function HardwarePage() {
         <h1 className="text-lg font-semibold">Hardware orders</h1>
         <span className="text-sm text-muted-foreground">{openCount} open</span>
       </div>
-      <HardwareOrders batches={batches} cutlists={cutlists} suppliers={suppliersRes.data ?? []} hardwareCatalog={hardwareRes.data ?? []} userId={user.id} />
+      <HardwareOrders batches={batches} cutlists={cutlists} suppliers={suppliersRes.data ?? []} hardwareCatalog={hardwareRes.data ?? []} userId={user.id} canPlace={canPlace} />
     </div>
   );
 }
