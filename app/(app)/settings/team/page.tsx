@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { TeamList } from "@/components/settings/team-list";
-import { InviteManager } from "@/components/settings/invite-manager";
+import { CreateUserForm } from "@/components/settings/create-user-form";
 import type { ProductionRole } from "@/lib/types";
 
 export default async function TeamSettingsPage() {
@@ -24,13 +24,13 @@ export default async function TeamSettingsPage() {
       {isAdmin && (
         <section className="rounded-lg border bg-card">
           <div className="px-5 py-3.5 border-b">
-            <h2 className="font-medium">Allowed emails</h2>
+            <h2 className="font-medium">Add team member</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Only these emails can sign up. Add someone before they create an account.
+              Create an account and set their password. Share the email and password — they just log in.
             </p>
           </div>
           <div className="px-5 py-4">
-            <InviteManager />
+            <CreateUserForm />
           </div>
         </section>
       )}
