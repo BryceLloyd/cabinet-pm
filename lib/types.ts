@@ -3,15 +3,13 @@
 
 export type ProjectStatus = "planning" | "active" | "on_hold" | "complete" | "cancelled";
 
-export type ProductionRole = "admin" | "office" | "factory" | "site" | "member";
+export type ProductionRole = "admin" | "office" | "factory" | "site";
 
 export interface Profile {
   id: string;
   full_name: string;
   avatar_url: string | null;
   role: ProductionRole;
-  office_access: boolean;
-  production_access: boolean;
   density_preference: "compact" | "comfortable";
   notification_preferences: Record<string, unknown>;
   show_room_groups: boolean;
