@@ -3,18 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { UserMenu } from "@/components/user-menu";
 import { BottomTabBar } from "@/components/bottom-tab-bar";
-import { PageTitle } from "@/components/page-title";
 import { MobileFab } from "@/components/mobile-fab";
 import { DensityProvider } from "@/components/density-provider";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { ServiceWorkerRegister } from "@/components/notifications/sw-register";
-
-const NAV = [
-  { href: "/dashboard" as const, label: "Dashboard" },
-  { href: "/plan" as const, label: "Year plan" },
-  { href: "/projects" as const, label: "Projects" },
-  { href: "/tasks" as const, label: "Tasks" },
-];
+import { ViewSwitch } from "@/components/view-switch";
+import { HeaderNav } from "@/components/header-nav";
 
 export default async function AppShell({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -22,7 +16,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
   if (!user) redirect("/login");
 
   const [{ data: profile }, { data: businessInfo }] = await Promise.all([
-    supabase.from("profiles").select("full_name, role, avatar_url, density_preference, deactivated_at").eq("id", user.id).single(),
+    supabase.from("profiles").select("full_name, role, avatar_url, density_preference, deactivated_at, office_access, production_access").eq("id", user.id).single(),
     supabase.from("business_info").select("name, logo_url").eq("id", 1).single(),
   ]);
 
@@ -48,39 +42,32 @@ export default async function AppShell({ children }: { children: React.ReactNode
 
   const bizName = businessInfo?.name || "Cabinet PM";
   const bizLogo = businessInfo?.logo_url || null;
+  const isAdmin = profile.role === "admin";
+  const hasOffice = isAdmin || profile.office_access;
+  const hasProduction = isAdmin || profile.production_access;
 
   return (
     <div className="min-h-screen flex flex-col">
       <header className="sticky top-0 z-50 border-b bg-background">
-        <div className="container flex h-14 items-center justify-between px-4">
+        <div className="container flex h-14 items-center justify-between gap-2 px-4">
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
             <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
               {bizLogo && (
                 <img src={bizLogo} alt="" className="h-7 w-7 object-contain rounded" />
               )}
-              <span className="hidden md:inline text-sm font-semibold tracking-tight">{bizName}</span>
+              <span className="hidden lg:inline text-sm font-semibold tracking-tight">{bizName}</span>
             </Link>
-            <span className="hidden md:inline text-muted-foreground/40 text-sm">/</span>
-            <PageTitle />
+            <ViewSwitch hasOffice={hasOffice} hasProduction={hasProduction} />
           </div>
           <div className="flex items-center gap-1 md:gap-4">
-            <nav className="hidden md:flex items-center gap-1">
-              {NAV.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground rounded-md hover:bg-muted transition-colors"
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
+            <HeaderNav />
             <NotificationBell userId={user.id} />
             <UserMenu
               fullName={profile.full_name}
               email={user.email || ""}
               role={profile.role}
               avatarUrl={profile.avatar_url || null}
+              showProductionSettings={isAdmin && hasProduction}
             />
           </div>
         </div>

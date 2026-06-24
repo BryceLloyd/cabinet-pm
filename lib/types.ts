@@ -3,11 +3,15 @@
 
 export type ProjectStatus = "planning" | "active" | "on_hold" | "complete" | "cancelled";
 
+export type ProductionRole = "admin" | "office" | "factory" | "site" | "member";
+
 export interface Profile {
   id: string;
   full_name: string;
   avatar_url: string | null;
-  role: "admin" | "member";
+  role: ProductionRole;
+  office_access: boolean;
+  production_access: boolean;
   density_preference: "compact" | "comfortable";
   notification_preferences: Record<string, unknown>;
   show_room_groups: boolean;
@@ -164,6 +168,152 @@ export interface CalendarEvent {
   created_by: string;
   created_at: string;
   updated_at: string;
+}
+
+// ── Production management ────────────────────────────────────────────────────
+
+export type StageKind = "work" | "order";
+export type ItemGranularity =
+  | "material_order"
+  | "material_order_painting"
+  | "cutlist"
+  | "room";
+export type ProductionRefType = "material_order" | "cutlist" | "room";
+export type SupplierKind = "in_house" | "outsource";
+export type SupplierCategory = "cut_edge" | "hardware";
+export type StepAppliesTo = "all" | "in_house" | "outsource";
+
+export interface Supplier {
+  id: string;
+  name: string;
+  kind: SupplierKind;
+  category: SupplierCategory;
+  sort_order: number;
+  archived_at: string | null;
+  created_at: string;
+}
+
+export interface Material {
+  id: string;
+  name: string;
+  default_supplier_id: string | null;
+  sort_order: number;
+  archived_at: string | null;
+  created_at: string;
+}
+
+export interface PaintType {
+  id: string;
+  name: string;
+  sort_order: number;
+  archived_at: string | null;
+  created_at: string;
+}
+
+export interface HardwareCatalogItem {
+  id: string;
+  name: string;
+  default_supplier_id: string | null;
+  sort_order: number;
+  archived_at: string | null;
+  created_at: string;
+}
+
+export type HardwareItemStatus = "to_order" | "ordered" | "received";
+
+export interface HardwareOrder {
+  id: string;
+  title: string;
+  cutlist_id: string | null;
+  created_by: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HardwareOrderItem {
+  id: string;
+  hardware_order_id: string;
+  name: string;
+  qty: number | null;
+  supplier_id: string | null;
+  status: HardwareItemStatus;
+  ordered_at: string | null;
+  received_at: string | null;
+  completed_by: string | null;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface ProductionStage {
+  id: string;
+  name: string;
+  slug: string;
+  kind: StageKind;
+  item_granularity: ItemGranularity;
+  gates_on_stage_id: string | null;
+  is_parallel: boolean;
+  sort_order: number;
+  archived_at: string | null;
+  created_at: string;
+}
+
+export interface ProductionStep {
+  id: string;
+  stage_id: string;
+  name: string;
+  sort_order: number;
+  applies_to: StepAppliesTo;
+  archived_at: string | null;
+  created_at: string;
+}
+
+export interface Cutlist {
+  id: string;
+  project_id: string;
+  name: string;
+  due_date: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CutlistRoom {
+  cutlist_id: string;
+  room_id: string;
+  sort_order: number;
+}
+
+export interface MaterialOrder {
+  id: string;
+  cutlist_id: string;
+  material_name: string;
+  supplier_id: string | null;
+  paint_type_id: string | null;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface ProductionItem {
+  id: string;
+  stage_id: string;
+  cutlist_id: string;
+  ref_type: ProductionRefType;
+  ref_id: string;
+  notes: string | null;
+  sort_order: number;
+  completed_at: string | null;
+  completed_by: string | null;
+  created_at: string;
+}
+
+export interface ProductionItemStep {
+  id: string;
+  item_id: string;
+  step_id: string;
+  sort_order: number;
+  completed_at: string | null;
+  completed_by: string | null;
 }
 
 export type {
