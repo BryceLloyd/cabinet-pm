@@ -19,6 +19,7 @@ interface Tab {
   label: string;
   icon: LucideIcon;
   match?: (pathname: string) => boolean;
+  officeOnly?: boolean;
 }
 
 const OFFICE_TABS: Tab[] = [
@@ -35,13 +36,13 @@ const PRODUCTION_TABS: Tab[] = [
   { href: "/production/cut-edge", label: "Factory", icon: Factory, match: (p) => FACTORY_STAGES.some((s) => p === s || p.startsWith(s + "/")) },
   { href: "/production/installation", label: "Install", icon: Truck, match: (p) => p.startsWith("/production/installation") },
   { href: "/production/hardware", label: "Hardware", icon: Package, match: (p) => p.startsWith("/production/hardware") },
-  { href: "/production/cutlists", label: "Cutlists", icon: ClipboardList, match: (p) => p.startsWith("/production/cutlists") },
+  { href: "/production/cutlists", label: "Cutlists", icon: ClipboardList, match: (p) => p.startsWith("/production/cutlists"), officeOnly: true },
 ];
 
-export function BottomTabBar() {
+export function BottomTabBar({ showCutlists = true }: { showCutlists?: boolean }) {
   const pathname = usePathname();
   const isProduction = pathname === "/production" || pathname.startsWith("/production/");
-  const tabs = isProduction ? PRODUCTION_TABS : OFFICE_TABS;
+  const tabs = (isProduction ? PRODUCTION_TABS : OFFICE_TABS).filter((t) => showCutlists || !t.officeOnly);
 
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t bg-background pb-[env(safe-area-inset-bottom)]">
