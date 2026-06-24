@@ -61,7 +61,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
             <ViewSwitch hasOffice={hasOffice} hasProduction={hasProduction} />
           </div>
           <div className="flex items-center gap-1 md:gap-4">
-            <HeaderNav />
+            <HeaderNav showCutlists={hasOffice} />
             <NotificationBell userId={user.id} />
             <UserMenu
               fullName={profile.full_name}
@@ -78,7 +78,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
           {children}
         </DensityProvider>
       </main>
-      <BottomTabBar />
+      <BottomTabBar showCutlists={hasOffice} />
       <MobileFab />
       <ServiceWorkerRegister />
     </div>

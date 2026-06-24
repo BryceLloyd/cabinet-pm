@@ -23,17 +23,17 @@ const OFFICE_NAV: { href: string; label: string; icon: LucideIcon }[] = [
 
 const FACTORY_STAGES = ["/production/cut-edge", "/production/painting", "/production/assembly"];
 
-const PRODUCTION_NAV: { href: string; label: string; icon: LucideIcon }[] = [
+const PRODUCTION_NAV: { href: string; label: string; icon: LucideIcon; officeOnly?: boolean }[] = [
   { href: "/production", label: "Dashboard", icon: LayoutDashboard },
   { href: "/production/cut-edge", label: "Factory", icon: Factory },
   { href: "/production/installation", label: "Installation", icon: Truck },
   { href: "/production/hardware", label: "Hardware orders", icon: Package },
-  { href: "/production/cutlists", label: "Cutlists", icon: ClipboardList },
+  { href: "/production/cutlists", label: "Cutlists", icon: ClipboardList, officeOnly: true },
 ];
 
 const base = "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors";
 
-export function HeaderNav() {
+export function HeaderNav({ showCutlists = true }: { showCutlists?: boolean }) {
   const pathname = usePathname();
   const isProduction = pathname === "/production" || pathname.startsWith("/production/");
 
@@ -46,7 +46,7 @@ export function HeaderNav() {
     return pathname === href || pathname.startsWith(href + "/");
   }
 
-  const items = isProduction ? PRODUCTION_NAV : OFFICE_NAV;
+  const items = (isProduction ? PRODUCTION_NAV : OFFICE_NAV).filter((i) => showCutlists || !("officeOnly" in i && i.officeOnly));
   const isActive = isProduction ? prodActive : officeActive;
 
   return (
