@@ -4,17 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-type Mode = "signin" | "signup" | "magic";
-
 export function LoginForm({ bizName, bizLogo }: { bizName: string; bizLogo: string | null }) {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [magicSent, setMagicSent] = useState(false);
 
   async function handleSignIn(e: React.FormEvent) {
     e.preventDefault();
@@ -30,50 +25,6 @@ export function LoginForm({ bizName, bizLogo }: { bizName: string; bizLogo: stri
     }
   }
 
-  async function handleSignUp(e: React.FormEvent) {
-    e.preventDefault();
-    if (password !== confirmPassword) {
-      setError("Passwords don't match");
-      return;
-    }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: `${location.origin}/auth/callback` },
-    });
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-    } else {
-      router.push("/dashboard");
-    }
-  }
-
-  async function handleMagicLink(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${location.origin}/auth/callback` },
-    });
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-    } else {
-      setMagicSent(true);
-      setLoading(false);
-    }
-  }
-
   return (
     <main className="min-h-screen grid place-items-center bg-muted/30 px-6">
       <div className="w-full max-w-sm">
@@ -82,66 +33,20 @@ export function LoginForm({ bizName, bizLogo }: { bizName: string; bizLogo: stri
             <img src={bizLogo} alt="" className="h-12 mx-auto mb-3 object-contain" />
           )}
           <h1 className="text-2xl font-semibold tracking-tight">{bizName}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {mode === "signin" && "Sign in to your account"}
-            {mode === "signup" && "Create your account"}
-            {mode === "magic" && "Sign in with a magic link"}
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">Sign in to your account</p>
         </div>
 
-        {magicSent ? (
-          <div className="rounded-md border bg-card p-6 text-sm text-center">
-            <p>Check <span className="font-medium">{email}</span> for a sign-in link.</p>
-            <button
-              onClick={() => { setMagicSent(false); setMode("signin"); }}
-              className="mt-3 text-xs text-muted-foreground hover:text-foreground underline"
-            >Back to sign in</button>
-          </div>
-        ) : (
-          <>
-            {/* Tab switcher */}
-            <div className="flex items-center rounded-md border p-0.5 mb-5">
-              {([["signin", "Sign in"], ["signup", "Sign up"], ["magic", "Magic link"]] as const).map(([key, label]) => (
-                <button
-                  key={key}
-                  onClick={() => { setMode(key); setError(null); }}
-                  className={`flex-1 h-8 text-xs rounded font-medium transition-colors ${
-                    mode === key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-                  }`}
-                >{label}</button>
-              ))}
-            </div>
+        <form onSubmit={handleSignIn} className="space-y-4">
+          <InputField id="email" label="Email" type="email" required value={email} onChange={setEmail} />
+          <InputField id="password" label="Password" type="password" required value={password} onChange={setPassword} />
+          <SubmitButton loading={loading}>Sign in</SubmitButton>
+        </form>
 
-            {mode === "signin" && (
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <InputField id="email" label="Email" type="email" required value={email} onChange={setEmail} />
-                <InputField id="password" label="Password" type="password" required value={password} onChange={setPassword} />
-                <SubmitButton loading={loading}>Sign in</SubmitButton>
-              </form>
-            )}
+        <p className="mt-4 text-xs text-muted-foreground text-center">
+          No account? Ask your admin to create one for you.
+        </p>
 
-            {mode === "signup" && (
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <InputField id="email" label="Email" type="email" required value={email} onChange={setEmail} />
-                <InputField id="password" label="Password" type="password" required value={password} onChange={setPassword} placeholder="At least 6 characters" />
-                <InputField id="confirm" label="Confirm password" type="password" required value={confirmPassword} onChange={setConfirmPassword} />
-                <SubmitButton loading={loading}>Create account</SubmitButton>
-                <p className="text-xs text-muted-foreground text-center">
-                  Only pre-approved emails can create an account. Ask your admin to add you.
-                </p>
-              </form>
-            )}
-
-            {mode === "magic" && (
-              <form onSubmit={handleMagicLink} className="space-y-4">
-                <InputField id="email" label="Email" type="email" required value={email} onChange={setEmail} />
-                <SubmitButton loading={loading}>Send magic link</SubmitButton>
-              </form>
-            )}
-
-            {error && <p className="mt-3 text-sm text-destructive text-center">{error}</p>}
-          </>
-        )}
+        {error && <p className="mt-3 text-sm text-destructive text-center">{error}</p>}
       </div>
     </main>
   );
