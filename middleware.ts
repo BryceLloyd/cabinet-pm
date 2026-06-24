@@ -55,6 +55,11 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL("/production", request.url));
       }
 
+      // Cutlists are an office/admin planning tool; factory/site can't manage them.
+      if (path.startsWith("/production/cutlists") && !office) {
+        return NextResponse.redirect(new URL("/production", request.url));
+      }
+
       // Admin-only settings: non-admins can only reach Profile / Notifications.
       const ADMIN_ONLY_SETTINGS = ["/settings/business", "/settings/team", "/settings/phases", "/settings/event-types", "/settings/task-types", "/settings/task-templates"];
       if (profile.role !== "admin" && ADMIN_ONLY_SETTINGS.some((p) => path === p || path.startsWith(p + "/"))) {

@@ -15,6 +15,7 @@ interface Props {
   paintTypes: PaintType[];
   hardwareCatalog: HardwareCatalogItem[];
   userId: string;
+  canManage: boolean;
 }
 
 const DOT: Record<SegmentStatus, string> = {
@@ -23,7 +24,7 @@ const DOT: Record<SegmentStatus, string> = {
   pending: "bg-muted-foreground/25",
 };
 
-export function ProductionDashboard({ data, projects, suppliers, materials, paintTypes, hardwareCatalog, userId }: Props) {
+export function ProductionDashboard({ data, projects, suppliers, materials, paintTypes, hardwareCatalog, userId, canManage }: Props) {
   const [addOpen, setAddOpen] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const { metrics, sections, cutlists } = data;
@@ -80,7 +81,7 @@ export function ProductionDashboard({ data, projects, suppliers, materials, pain
 
       <div className="text-xs text-muted-foreground mb-2">Cutlists in progress</div>
       {cutlists.length === 0 ? (
-        <div className="rounded-lg border bg-card px-4 py-10 text-center text-sm text-muted-foreground">No cutlists in progress. Add one to get started.</div>
+        <div className="rounded-lg border bg-card px-4 py-10 text-center text-sm text-muted-foreground">No cutlists in progress.{canManage ? " Add one to get started." : ""}</div>
       ) : (
         <div className="space-y-2">
           {cutlists.map((c) => {
@@ -122,8 +123,12 @@ export function ProductionDashboard({ data, projects, suppliers, materials, pain
         </div>
       )}
 
-      <ActionPill label="Add cutlist" onClick={() => setAddOpen(true)} />
-      <AddCutlistPanel open={addOpen} onClose={() => setAddOpen(false)} projects={projects} suppliers={suppliers} materials={materials} paintTypes={paintTypes} hardwareCatalog={hardwareCatalog} userId={userId} />
+      {canManage && (
+        <>
+          <ActionPill label="Add cutlist" onClick={() => setAddOpen(true)} />
+          <AddCutlistPanel open={addOpen} onClose={() => setAddOpen(false)} projects={projects} suppliers={suppliers} materials={materials} paintTypes={paintTypes} hardwareCatalog={hardwareCatalog} userId={userId} />
+        </>
+      )}
     </div>
   );
 }
