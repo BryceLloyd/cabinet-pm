@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { UserMenu } from "@/components/user-menu";
 import { BottomTabBar } from "@/components/bottom-tab-bar";
@@ -12,9 +12,9 @@ import { HeaderNav } from "@/components/header-nav";
 import { canSeeOffice, canSeeProduction, canSeeProductionSettings } from "@/lib/production/access";
 
 export default async function AppShell({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) redirect("/login");
+  const supabase = await createClient();
 
   const [{ data: profile }, { data: businessInfo }] = await Promise.all([
     supabase.from("profiles").select("full_name, role, avatar_url, density_preference, deactivated_at").eq("id", user.id).single(),

@@ -32,6 +32,7 @@ import { AddEventPanel } from "@/components/plan/add-event-panel";
 import { EventDetailPanel } from "@/components/plan/event-detail-panel";
 import { AddProjectPanel } from "@/components/projects/add-project-panel";
 import type { CalendarEvent, EventType, Project, RoomGroup } from "@/lib/types";
+import type { DashboardCardData } from "@/lib/dashboard/server-data";
 
 function SortableCard({
   cardLayout,
@@ -40,6 +41,7 @@ function SortableCard({
   onRemove,
   onTaskClick,
   onEventClick,
+  initialData,
 }: {
   cardLayout: CardLayout;
   userId: string;
@@ -47,6 +49,7 @@ function SortableCard({
   onRemove: () => void;
   onTaskClick?: (taskId: string) => void;
   onEventClick?: (eventId: string) => void;
+  initialData?: unknown;
 }) {
   const definition = CARD_REGISTRY[cardLayout.cardType];
   const {
@@ -93,7 +96,7 @@ function SortableCard({
               isEditing={isEditing}
               onRemove={onRemove}
             >
-              <LazyComponent userId={userId} onTaskClick={onTaskClick} onEventClick={onEventClick} />
+              <LazyComponent userId={userId} onTaskClick={onTaskClick} onEventClick={onEventClick} initialData={initialData} />
             </DashboardCard>
           </Suspense>
         </div>
@@ -102,7 +105,13 @@ function SortableCard({
   );
 }
 
-export function DashboardGrid({ userId }: { userId: string }) {
+export function DashboardGrid({
+  userId,
+  cardData,
+}: {
+  userId: string;
+  cardData?: DashboardCardData;
+}) {
   const router = useRouter();
   const supabase = createClient();
   const [cards, setCards] = useState<CardLayout[]>(() => getLayout(userId));
@@ -123,7 +132,7 @@ export function DashboardGrid({ userId }: { userId: string }) {
   const [taskTypes, setTaskTypes] = useState<{ id: string; name: string; color: string }[]>([]);
   const [taskTemplates, setTaskTemplates] = useState<{ id: string; name: string; items: string[] }[]>([]);
   const [roomGroups, setRoomGroups] = useState<{ id: string; name: string; project_id: string }[]>([]);
-  const [dataLoaded, setDataLoaded] = useState(false);
+  const dataRequested = useRef(false);
 
   // Detail panel state
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -132,9 +141,12 @@ export function DashboardGrid({ userId }: { userId: string }) {
 
   const groupsByProject = useRef(new Map<string, { id: string; name: string; project_id: string }[]>());
 
-  // Load panel data once
-  useEffect(() => {
-    if (dataLoaded) return;
+  // Load the data the add/detail panels need lazily — only the first time the
+  // user actually opens a panel — instead of on every dashboard load. These six
+  // lists aren't used to render the dashboard itself.
+  const ensureData = useCallback(() => {
+    if (dataRequested.current) return;
+    dataRequested.current = true;
     Promise.all([
       supabase.from("projects").select("id, name").in("status", ["planning", "active"]).order("name"),
       supabase.from("profiles").select("id, full_name").is("deactivated_at", null).order("full_name"),
@@ -157,12 +169,12 @@ export function DashboardGrid({ userId }: { userId: string }) {
         map.set(g.project_id, list);
       });
       groupsByProject.current = map;
-      setDataLoaded(true);
     });
-  }, [dataLoaded, supabase]);
+  }, [supabase]);
 
   // Fetch and open task detail panel
   const handleTaskClick = useCallback(async (taskId: string) => {
+    ensureData();
     const { data } = await supabase
       .from("tasks")
       .select("id, title, description, due_date, priority, project_id, room_id, room_group_id, task_type_id, assigned_to, completed_at, completed_by, created_by, created_at, projects(name), rooms(name), room_groups(name), task_types(id,name,color), assignee:profiles!tasks_assigned_to_fkey(full_name), completer:profiles!tasks_completed_by_fkey(full_name)")
@@ -178,17 +190,18 @@ export function DashboardGrid({ userId }: { userId: string }) {
       if (Array.isArray(row.completer)) row.completer = row.completer[0] || null;
       setSelectedTask(row);
     }
-  }, [supabase]);
+  }, [supabase, ensureData]);
 
   // Fetch and open event detail panel
   const handleEventClick = useCallback(async (eventId: string) => {
+    ensureData();
     const { data } = await supabase
       .from("calendar_events")
       .select("*")
       .eq("id", eventId)
       .single();
     if (data) setSelectedEvent(data as CalendarEvent);
-  }, [supabase]);
+  }, [supabase, ensureData]);
 
   // Close quick-add menu on outside click
   useEffect(() => {
@@ -259,6 +272,7 @@ export function DashboardGrid({ userId }: { userId: string }) {
                 onRemove={() => removeCard(card.cardType)}
                 onTaskClick={handleTaskClick}
                 onEventClick={handleEventClick}
+                initialData={cardData?.[card.cardType as keyof typeof cardData]}
               />
             ))}
 
@@ -319,7 +333,7 @@ export function DashboardGrid({ userId }: { userId: string }) {
           </div>
         )}
         <button
-          onClick={() => setShowQuickAdd(!showQuickAdd)}
+          onClick={() => { ensureData(); setShowQuickAdd(!showQuickAdd); }}
           className="inline-flex items-center gap-2 h-10 pl-4 pr-5 rounded-full bg-primary text-primary-foreground text-sm font-medium shadow-lg hover:opacity-90 transition-opacity"
         >
           <Plus size={18} />

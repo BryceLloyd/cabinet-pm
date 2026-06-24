@@ -11,11 +11,17 @@ interface TodoRow {
   task_types: { name: string; color: string } | null;
 }
 
-export default function PersonalTodosCard({ userId, onTaskClick }: CardProps) {
-  const [todos, setTodos] = useState<TodoRow[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function PersonalTodosCard({ userId, onTaskClick, initialData }: CardProps) {
+  const initial = initialData as TodoRow[] | undefined;
+  const [todos, setTodos] = useState<TodoRow[]>(initial ?? []);
+  const [loading, setLoading] = useState(initial === undefined);
 
   useEffect(() => {
+    if (initial !== undefined) {
+      setTodos(initial);
+      setLoading(false);
+      return;
+    }
     const supabase = createClient();
     supabase
       .from("tasks")
@@ -30,7 +36,7 @@ export default function PersonalTodosCard({ userId, onTaskClick }: CardProps) {
         setTodos((data as unknown as TodoRow[]) || []);
         setLoading(false);
       });
-  }, [userId]);
+  }, [userId, initial]);
 
   async function toggleComplete(id: string) {
     const supabase = createClient();

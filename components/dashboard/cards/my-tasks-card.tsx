@@ -15,11 +15,17 @@ interface TaskRow {
   task_types: { name: string; color: string } | null;
 }
 
-export default function MyTasksCard({ userId, onTaskClick }: CardProps) {
-  const [tasks, setTasks] = useState<TaskRow[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function MyTasksCard({ userId, onTaskClick, initialData }: CardProps) {
+  const initial = initialData as TaskRow[] | undefined;
+  const [tasks, setTasks] = useState<TaskRow[]>(initial ?? []);
+  const [loading, setLoading] = useState(initial === undefined);
 
   useEffect(() => {
+    if (initial !== undefined) {
+      setTasks(initial);
+      setLoading(false);
+      return;
+    }
     const supabase = createClient();
     supabase
       .from("tasks")
@@ -29,11 +35,10 @@ export default function MyTasksCard({ userId, onTaskClick }: CardProps) {
       .order("due_date", { ascending: true, nullsFirst: false })
       .limit(20)
       .then(({ data }) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setTasks((data as unknown as TaskRow[]) || []);
         setLoading(false);
       });
-  }, [userId]);
+  }, [userId, initial]);
 
   return (
     <ul className="divide-y">
