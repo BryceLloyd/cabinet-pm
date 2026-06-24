@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { canSeeOffice, canSeeProduction } from "@/lib/production/access";
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -36,17 +37,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // Office / Production view access (admins always have both).
+  // Office / Production view access derived from role.
   if (user && !isAuthPage && !path.startsWith("/auth")) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role, office_access, production_access")
+      .select("role")
       .eq("id", user.id)
       .single();
     if (profile) {
-      const isAdmin = profile.role === "admin";
-      const office = isAdmin || profile.office_access;
-      const production = isAdmin || profile.production_access;
+      const office = canSeeOffice(profile.role);
+      const production = canSeeProduction(profile.role);
       const isProduction = path === "/production" || path.startsWith("/production/");
       if (isProduction && !production && office) {
         return NextResponse.redirect(new URL("/dashboard", request.url));

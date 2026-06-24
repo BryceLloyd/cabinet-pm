@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 
-const ROLES = ["admin", "office", "factory", "site", "member"] as const;
+const ROLES = ["admin", "office", "factory", "site"] as const;
 type Role = (typeof ROLES)[number];
 
 // Creates a team member directly: the admin sets the password, the user just
@@ -32,9 +32,7 @@ export async function POST(request: Request) {
   const fullName = String(body.full_name || "").trim();
   const email = String(body.email || "").toLowerCase().trim();
   const password = String(body.password || "");
-  const role: Role = ROLES.includes(body.role) ? body.role : "member";
-  const officeAccess = body.office_access !== false;
-  const productionAccess = body.production_access !== false;
+  const role: Role = ROLES.includes(body.role) ? body.role : "office";
 
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     return NextResponse.json({ error: "Enter a valid email address" }, { status: 400 });
@@ -68,8 +66,6 @@ export async function POST(request: Request) {
       id: created.user.id,
       full_name: fullName || email.split("@")[0],
       role,
-      office_access: role === "admin" ? true : officeAccess,
-      production_access: role === "admin" ? true : productionAccess,
       deactivated_at: null,
     },
     { onConflict: "id" }

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { canSeeProduction } from "@/lib/production/access";
 
 export default async function ProductionLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -8,10 +9,10 @@ export default async function ProductionLayout({ children }: { children: React.R
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, production_access")
+    .select("role")
     .eq("id", user.id)
     .single();
-  const hasProduction = profile?.role === "admin" || !!profile?.production_access;
+  const hasProduction = canSeeProduction(profile?.role ?? "");
   if (!hasProduction) redirect("/dashboard");
 
   return <>{children}</>;

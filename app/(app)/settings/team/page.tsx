@@ -7,7 +7,7 @@ export default async function TeamSettingsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const [{ data: profiles }, { data: profile }] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, avatar_url, role, office_access, production_access").is("deactivated_at", null).order("created_at"),
+    supabase.from("profiles").select("id, full_name, avatar_url, role").is("deactivated_at", null).order("created_at"),
     supabase.from("profiles").select("role").eq("id", user!.id).single(),
   ]);
 
@@ -16,7 +16,7 @@ export default async function TeamSettingsPage() {
   return (
     <div className="space-y-6">
       <TeamList
-        members={(profiles || []) as { id: string; full_name: string; avatar_url: string | null; role: ProductionRole; office_access: boolean; production_access: boolean }[]}
+        members={(profiles || []) as { id: string; full_name: string; avatar_url: string | null; role: ProductionRole }[]}
         currentUserId={user!.id}
         isAdmin={isAdmin}
       />

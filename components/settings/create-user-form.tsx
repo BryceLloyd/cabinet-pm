@@ -4,12 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ProductionRole } from "@/lib/types";
 
-const ROLE_OPTIONS: { value: ProductionRole; label: string }[] = [
-  { value: "member", label: "Member" },
-  { value: "office", label: "Office" },
-  { value: "factory", label: "Factory" },
-  { value: "site", label: "Site" },
-  { value: "admin", label: "Admin" },
+const ROLE_OPTIONS: { value: ProductionRole; label: string; blurb: string }[] = [
+  { value: "office", label: "Office", blurb: "Office + Production; manages jobs, orders & production settings" },
+  { value: "factory", label: "Factory", blurb: "Production floor — completes items & receives orders" },
+  { value: "site", label: "Site", blurb: "Installation only — completes install items" },
+  { value: "admin", label: "Admin", blurb: "Everything — plus team & system settings" },
 ];
 
 export function CreateUserForm() {
@@ -17,14 +16,12 @@ export function CreateUserForm() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<ProductionRole>("member");
-  const [officeAccess, setOfficeAccess] = useState(true);
-  const [productionAccess, setProductionAccess] = useState(true);
+  const [role, setRole] = useState<ProductionRole>("office");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const isAdminRole = role === "admin";
+  const roleBlurb = ROLE_OPTIONS.find((r) => r.value === role)?.blurb ?? "";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -40,8 +37,6 @@ export function CreateUserForm() {
         email,
         password,
         role,
-        office_access: officeAccess,
-        production_access: productionAccess,
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -56,9 +51,7 @@ export function CreateUserForm() {
     setFullName("");
     setEmail("");
     setPassword("");
-    setRole("member");
-    setOfficeAccess(true);
-    setProductionAccess(true);
+    setRole("office");
     setLoading(false);
     router.refresh();
   }
@@ -110,32 +103,8 @@ export function CreateUserForm() {
           >
             {ROLE_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
           </select>
+          <p className="text-xs text-muted-foreground mt-1">{roleBlurb}</p>
         </div>
-      </div>
-
-      <div className="flex items-center gap-4 text-sm">
-        <span className="text-xs text-muted-foreground">Access:</span>
-        <label className="flex items-center gap-1.5 cursor-pointer text-xs">
-          <input
-            type="checkbox"
-            checked={isAdminRole || officeAccess}
-            disabled={isAdminRole}
-            onChange={(e) => setOfficeAccess(e.target.checked)}
-            className="size-3.5 rounded border-input"
-          />
-          Office
-        </label>
-        <label className="flex items-center gap-1.5 cursor-pointer text-xs">
-          <input
-            type="checkbox"
-            checked={isAdminRole || productionAccess}
-            disabled={isAdminRole}
-            onChange={(e) => setProductionAccess(e.target.checked)}
-            className="size-3.5 rounded border-input"
-          />
-          Production
-        </label>
-        {isAdminRole && <span className="text-xs text-muted-foreground">Admins always have both</span>}
       </div>
 
       <button
